@@ -24,7 +24,7 @@ The following remain unchanged by the persistence slice:
 - `modules/cooking/logic.md`
 - the four-scenario default regression harness in `tests/manifest.yaml`
 
-This makes the Pure Web regression candidate a stable comparison point while persistence is developed independently.
+The v0.5 Pure Web regression baseline passed all three required suite runs at 36/36 and is tracked separately from persistence validation.
 
 ## Added durable Web slice
 
@@ -37,8 +37,12 @@ This makes the Pure Web regression candidate a stable comparison point while per
 - `schemas/storage_provider.yaml` — provider contract used by the slice.
 - `schemas/google_drive_store.yaml` — provider-specific physical mapping; not a canonical domain schema.
 - `dist/KITCHEN_SKILL_WEB_GOOGLE_DRIVE_LIVE_COOKING.md` — deployable Web + Drive bundle.
-- `tests/persistence/01_google_drive_cross_session_resume.md` — cross-session acceptance scenario, intentionally outside the existing Pure Web manifest.
+- `tests/persistence/manifest.yaml` — persistence integration gate definition.
+- `tests/persistence/01_google_drive_cross_session_resume.md` — candidate-visible cross-session scenario.
+- `tests/persistence/expectations/01_google_drive_cross_session_resume.md` — evaluator-only expectations loaded after candidate transcript freeze.
 - `tests/persistence/PROVIDER_SMOKE_TEST.md` — record of the real Drive/Sheets primitive smoke test performed during implementation.
+- `demo/PERSISTENCE_SESSION_A_PROMPT.md` — writer/session-A integration prompt.
+- `demo/PERSISTENCE_SESSION_B_PROMPT.md` — genuinely fresh reader/session-B integration prompt.
 
 ## Google Drive v1 store
 
@@ -92,7 +96,15 @@ A real Web-host Drive/Sheets smoke test has passed for the provider primitives u
 
 This validates the physical provider operations, not the complete product behavior.
 
-The repository also defines the real cross-session A/B acceptance test, but **Chat A -> fresh Chat B recovery has not yet been executed and must not be reported as passed**. That is the next validation step.
+The v0.6 integration harness now separates candidate-visible scripts from evaluator-only expectations and requires two real conversations:
+
+1. run `demo/PERSISTENCE_SESSION_A_PROMPT.md` in Session A;
+2. carry only `TEST_COMMIT` and `TEST_STORE_URL` into a genuinely fresh conversation;
+3. run `demo/PERSISTENCE_SESSION_B_PROMPT.md` in Session B;
+4. Session B freezes B1/B2 candidate responses before loading evaluator expectations;
+5. the temporary test store is deleted on a clean PASS or retained explicitly for debugging on failure.
+
+**Chat A -> fresh Chat B recovery has not yet been executed and must not be reported as passed.** It is the current development gate before Shopping work begins.
 
 ## Architecture docs
 
