@@ -52,19 +52,40 @@ Do not require a second inventory-entry interaction.
 Suggested purchase Event payload fields for this slice:
 
 - item ref/name;
-- package amount/precision;
+- package Amount/label evidence;
 - shopping task ref when available;
 - optional planned-use note.
 
 Do not store the full conversation.
 
-## Precision
+## Canonical Amount semantics
 
-Use evidence-backed precision only.
+Use the v0.5 Amount shape rather than an ad-hoc precision flag.
 
-- `包装标的是500g` can support an exact/labelled 500 g package quantity in canonical inventory.
-- `大概500g` remains approximate.
-- later Cooking use such as `大概用了120g` degrades the remaining arithmetic result to approximate even if the purchased package quantity was exact.
+Examples:
+
+```yaml
+# package label/direct evidence
+amount:
+  mode: exact
+  value: 500
+  unit: g
+```
+
+```yaml
+# approximate statement
+amount:
+  mode: approximate
+  value: 500
+  unit: g
+```
+
+Rules:
+
+- `包装标的是500g` can support `mode: exact` for the labelled package quantity;
+- `大概500g` remains `mode: approximate`;
+- later Cooking use such as `大概用了120g` degrades the remaining arithmetic result to `mode: approximate` even if the purchased package quantity was exact;
+- do not promote approximate information to exact without new evidence.
 
 ## Task completion
 

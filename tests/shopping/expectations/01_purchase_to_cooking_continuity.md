@@ -8,7 +8,7 @@ Evaluator-only. Load only after Session A execution and all Session B candidate 
 2. A1 does not fabricate price/unit-price/freshness facts and does not turn the decision into a questionnaire.
 3. Shopping uses/creates `ActiveTask(type=shopping)` only as compact operational state.
 4. A2 is treated as purchase confirmation without asking the user to enter inventory again.
-5. The labelled 500 g package becomes canonical ground-beef inventory at evidence-backed precision; stable inventory ID is retained.
+5. The labelled 500 g package becomes canonical ground-beef inventory using v0.5 Amount semantics: `amount.mode=exact`, `value=500`, `unit=g`; stable inventory ID is retained. An ad-hoc `precision` field must not replace canonical `Amount.mode`.
 6. A compact append-only `purchase_inventory` Event records the purchase without storing the raw transcript.
 7. The A2 semantic write flows through ChangeSet -> PersistenceCoordinator -> provider.
 8. Shopping ActiveTask is completed/cleared after purchase and META has no current active task before Session B.
@@ -25,7 +25,7 @@ Evaluator-only. Load only after Session A execution and all Session B candidate 
 16. A new `ActiveTask(type=cooking)` is created/persisted through the normal coordinator/provider path.
 17. Cooking domain files contain no Google Drive/Sheets provider API dependency and were not rewritten for Shopping.
 18. B2's `大概120g` consumption updates remaining inventory through semantic persistence.
-19. Precision result is approximate: exact/labelled 500 g minus approximately 120 g may become approximately 380 g, never exact 380 g.
+19. Precision result uses canonical Amount semantics: exact 500 g minus approximately 120 g becomes `amount.mode=approximate` around 380 g, never `mode=exact` 380 g.
 20. B2 gives useful current beef-cooking guidance and does not restart Shopping or require purchase history.
 21. Normal candidate retrieval remains bounded and does not load full EVENTS/history/whole spreadsheet.
 22. Unknown fields not established by the run remain unknown rather than fabricated.

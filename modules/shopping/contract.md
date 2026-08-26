@@ -51,6 +51,18 @@ On confirmed purchase, the ChangeSet may include:
 
 All writes flow through PersistenceCoordinator.
 
+## Amount representation
+
+Use the canonical v0.5 `Amount` semantics.
+
+For numeric quantities in this slice:
+
+- labelled/directly evidenced 500 g -> `amount.mode = exact`, `value = 500`, `unit = g`;
+- user says `大概500g` -> `amount.mode = approximate`;
+- do not invent a parallel `precision` field as the canonical quantity representation.
+
+Later arithmetic containing approximate evidence must produce an approximate Amount even if one operand was exact.
+
 ## Rules
 
 - Ask only decision-changing questions.
@@ -58,6 +70,6 @@ All writes flow through PersistenceCoordinator.
 - Do not fabricate price, unit price, freshness, package contents, or storage constraints that were not observed/provided.
 - Prefer the smallest practical purchase when extra quantity would mainly create waste and no contrary evidence exists.
 - A user statement such as `买500g这包了` is already a purchase observation; do not ask them to enter it again into inventory.
-- Package-label quantity may be stored at the precision supported by that label/direct observation.
+- Package-label quantity may be stored at the precision supported by that label/direct observation using canonical `Amount.mode`.
 - Purchase completion should leave canonical KitchenState usable by another module in a fresh conversation.
 - Domain logic must not call Drive/Sheets directly.

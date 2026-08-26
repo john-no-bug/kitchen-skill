@@ -44,6 +44,21 @@ No new Shopping-specific table is introduced. Reuse:
 
 Shopping purchase state belongs in `STATE.inventory`; a compact purchase observation may be appended to `EVENTS`.
 
+## Canonical Amount
+
+For numeric inventory amounts use the v0.5 `Amount` representation:
+
+```yaml
+amount:
+  mode: exact | approximate | unknown | presence | level
+  value: number?
+  unit: string?
+```
+
+Do not use an ad-hoc `precision` field as the canonical substitute for `Amount.mode`.
+
+A package label `500 g` may support `mode: exact`; a user statement `大概120 g` is `mode: approximate`.
+
 ## Routing and bootstrap
 
 Every turn:
@@ -74,7 +89,7 @@ If the user says they bought the package, treat that statement as the purchase o
 
 Produce one semantic ChangeSet that may:
 
-- upsert the inventory item at evidence-backed precision;
+- upsert the inventory item at evidence-backed `Amount.mode`;
 - append a compact `purchase_inventory` Event;
 - clear/complete the Shopping ActiveTask;
 - clear `META.active_task_id`;
@@ -108,10 +123,10 @@ Answer the immediate physical problem first, give sensory completion cues, local
 
 Example:
 
-- Shopping purchase label says exactly 500 g beef;
+- Shopping stores labelled 500 g beef as `Amount(mode=exact, value=500, unit=g)`;
 - later Cooking user says approximately 120 g was used.
 
-The remaining amount may be represented as approximately 380 g, but not exact 380 g, because the subtraction includes approximate evidence.
+The remaining amount may be represented as `Amount(mode=approximate, value≈380, unit=g)`, but not exact 380 g, because the subtraction includes approximate evidence.
 
 ## Bounded retrieval
 

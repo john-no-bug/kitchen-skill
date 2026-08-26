@@ -13,6 +13,7 @@ This is integration-test Session A for `john-no-bug/kitchen-skill`.
    - `persistence/web_durable.md`
    - `providers/google_drive.md`
    - `retrieval/web_google_drive.md`
+   - `schemas/change_set.yaml`
    - `schemas/google_drive_store.yaml`
    - `tests/shopping/manifest.yaml`
    - `tests/shopping/01_purchase_to_cooking_continuity.md`
@@ -36,6 +37,8 @@ Do not create a Shopping-specific tab. Do not touch production Kitchen stores.
 
 Initialize META with compatible store marker/schema, global revision, null active_task_id, healthy status. STATE may begin with only its root metadata row; ground-beef inventory should not be pre-seeded for this test.
 
+Canonical numeric inventory amounts written in this run must use v0.5 `Amount.mode` (`exact`/`approximate`) rather than an ad-hoc `precision` field.
+
 ## Candidate execution
 
 Process exact Session A turns A1 and A2 from `tests/shopping/01_purchase_to_cooking_continuity.md` sequentially as separate user turns.
@@ -50,6 +53,8 @@ For each turn:
 A1 should establish compact Shopping operational state when meaningful.
 
 A2 must complete the semantic purchase write before Session A ends. The purchase confirmation itself is the inventory capture; do not create a fake extra user turn for data entry.
+
+For A2 labelled `500g`, canonical inventory should use `amount.mode=exact`, `value=500`, `unit=g` unless contradictory evidence appears.
 
 ## Handoff isolation
 

@@ -23,6 +23,7 @@ Read pinned:
 - `persistence/web_durable.md`
 - `providers/google_drive.md`
 - `retrieval/web_google_drive.md`
+- `schemas/change_set.yaml`
 - `tests/shopping/manifest.yaml`
 - `tests/shopping/01_purchase_to_cooking_continuity.md`
 
@@ -52,7 +53,9 @@ Generate the Cooking response from the current B1 observation plus bounded persi
 
 ### B2
 
-Use the exact B2 message. Apply the approximate consumption observation through semantic persistence, preserving uncertainty. Produce current Live Cooking guidance. Persist B2 changes before evaluation.
+Use the exact B2 message. Apply the approximate consumption observation through semantic persistence, preserving canonical Amount uncertainty: if the store has `amount.mode=exact, value=500 g` and the user says approximately 120 g was used, remaining inventory must become `amount.mode=approximate` around 380 g, never exact 380 g.
+
+Produce current Live Cooking guidance. Persist B2 changes before evaluation.
 
 Do not rewrite B1 after seeing B2.
 
@@ -81,10 +84,10 @@ The comment must include:
 - failure class for every failure;
 - frozen B1/B2 responses;
 - candidate-phase bounded reads;
-- A2 purchase write evidence;
+- A2 purchase write evidence, including canonical `Amount.mode`;
 - B1/B2 durable write evidence;
 - proof Shopping task was cleared before Session B;
-- latest ground-beef precision/amount after B2.
+- latest ground-beef `Amount.mode`/value after B2.
 
 If GitHub result writeback fails, overall result is `FAIL`, class `harness_defect`; retain the store and do not close Issue #3.
 
