@@ -4,7 +4,7 @@ Evaluator-only. Load this file only after all Session A and Session B candidate 
 
 ## Gate
 
-All criteria below are required. A failure should be assigned to the smallest broken boundary rather than to wording differences.
+All criteria below are required unless explicitly marked failure-injection-only. A failure should be assigned to the smallest broken boundary rather than to wording differences.
 
 ## Session A expectations
 
@@ -31,10 +31,10 @@ All criteria below are required. A failure should be assigned to the smallest br
 15. B1's newest direct observation (`no obvious pooled water`, `sizzling`, `onion not added`) overrides any older persisted wet-beef state.
 16. The candidate does not repeat already-completed soften/break-apart work.
 17. Guidance continues from the current browning/add-onion dependency and remains concise Live Cooking guidance.
-18. B1's corrected physical/task state is durably persisted after reasoning.
+18. B1's corrected physical/task state is durably persisted after reasoning and before B2.
 19. At B2, `onion already added` invalidates any pending add-onion instruction.
 20. The candidate adapts locally to sticking rather than restarting the recipe.
-21. B2 task-state changes again use the same PersistenceCoordinator/provider path.
+21. B2 task-state changes are durably persisted and again use the same PersistenceCoordinator/provider path.
 
 ## Architecture preservation expectations
 
@@ -42,13 +42,19 @@ All criteria below are required. A failure should be assigned to the smallest br
 23. Current direct observation outranks persisted state.
 24. Unknown remains unknown; approximate information is not upgraded to exact without evidence.
 25. Context size is structurally bounded and does not grow in proportion to Event history.
-26. If a durable write failure is actually encountered during the run, safe cooking guidance continues and the candidate does not falsely claim durable success.
+26. If a durable write failure is actually encountered during the run, safe cooking guidance continues and the candidate does not falsely claim durable success. This is failure-injection-only and may be `NOT_EXERCISED` in the normal cross-session run.
+
+## Harness completion expectations
+
+27. Before cleanup, the frozen evaluation result is durably written as a comment to `john-no-bug/kitchen-skill` Issue #2, including TEST_COMMIT, TEST_STORE_URL, criterion results, failure classes, bounded-retrieval evidence, and latest post-B2 revisions.
+28. If evaluation is FAIL, the store is explicitly retained for debugging and Issue #2 remains open. If evaluation is PASS, results are recorded first, the temporary store is deleted and verified unavailable, cleanup is recorded on Issue #2, and Issue #2 is closed completed.
+29. Failure to write the result to Issue #2 is itself `harness_defect`, forces overall FAIL, and requires retaining the test store.
 
 ## Pass decision
 
-PASS only if all required criteria that are exercised by the run pass and there is no architecture-boundary violation.
+PASS only if all required criteria that are exercised by the run pass and there is no architecture-boundary or harness-completion violation.
 
-If a criterion requiring an injected failure was not exercised (for example durable-write failure), mark it `NOT_EXERCISED`, not PASS. Such a result does not block the cross-session-resume gate but must be covered by the later failure/degradation suite.
+If a criterion requiring an injected failure was not exercised (criterion 26), mark it `NOT_EXERCISED`, not PASS. That does not block the cross-session-resume gate but must be covered by the later failure/degradation suite.
 
 ## Failure classification
 
