@@ -66,7 +66,56 @@ After the B2 provider write completes:
 
 You may inspect only the bounded store ranges/rows needed to verify criteria. Do not turn evaluation into a full history load.
 
-## Required report
+## Mandatory GitHub result sink
+
+The durable test result belongs on existing tracking issue:
+
+- repository: `john-no-bug/kitchen-skill`
+- issue: `#2` — `v0.6 persistence gate: real Chat A → fresh Chat B resume`
+
+Do **not** create a separate regression issue for this gate.
+
+Before deleting or otherwise cleaning up the temporary store, add a comment to Issue #2 containing:
+
+- `TEST_COMMIT`
+- `TEST_STORE_URL`
+- overall `PASS` or `FAIL`
+- every criterion as `PASS`, `FAIL`, or `NOT_EXERCISED`
+- exact failure class for every failure
+- concise evidence for bounded bootstrap, state precedence, completed-step handling, and durable B1/B2 writeback
+- the latest observed META/ActiveTask revisions after B2
+- `TEST_STORE_CLEANUP: pending`
+
+This GitHub writeback is part of the harness, not an optional convenience.
+
+If the Issue #2 comment cannot be written:
+
+1. force the overall test result to `FAIL`;
+2. classify `harness_defect`;
+3. retain the temporary store;
+4. do not close Issue #2;
+5. return `TEST_STORE_RETAINED_FOR_DEBUGGING` to the user.
+
+## Cleanup and gate closure
+
+After a successful Issue #2 result comment:
+
+### If the evaluated gate is FAIL
+
+- retain the temporary store for debugging;
+- add a short follow-up comment to Issue #2 stating `TEST_STORE_RETAINED_FOR_DEBUGGING`;
+- leave Issue #2 open.
+
+### If the evaluated gate is PASS
+
+1. delete the temporary Google Sheet only after all evaluation evidence and the first Issue #2 result comment are safely recorded;
+2. verify the store is no longer accessible;
+3. add a follow-up comment to Issue #2 stating `TEST_STORE_CLEANUP: deleted`;
+4. close Issue #2 with state reason `completed`.
+
+If cleanup fails, do not silently close the issue. Add the cleanup failure to Issue #2 and leave it open until the test artifact is resolved.
+
+## Required user-facing report
 
 Return:
 
@@ -76,8 +125,7 @@ Return:
 - criteria results using `PASS`, `FAIL`, or `NOT_EXERCISED`
 - exact failure class for every failure
 - concise evidence for bounded bootstrap, state precedence, no completed-step restart, and durable writeback
-- whether the test store was successfully deleted after evaluation
-
-If the gate passes, delete the temporary Google Sheet after all evaluation evidence has been collected. If the gate fails because store contents are needed for debugging, leave it in place and clearly say `TEST_STORE_RETAINED_FOR_DEBUGGING`.
+- Issue #2 writeback status
+- whether the test store was deleted or retained
 
 Do not modify production Kitchen data. Do not modify repository candidate files during this test.
