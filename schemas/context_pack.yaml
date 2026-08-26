@@ -1,0 +1,16 @@
+ContextPack:
+  task:
+    intent: cook
+    user_message: string
+  active_task: ActiveTask?
+  current_observation: map
+  relevant_inventory: map
+  relevant_equipment: map
+  relevant_experience: [string]   # keep small
+  due_checks: [string]            # only decision-changing checks
+  confidence: map
+
+rules:
+  - bounded size
+  - current state preferred over duplicate history
+  - read-only selection; retrieval does not mutate canonical task state
