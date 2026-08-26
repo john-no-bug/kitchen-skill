@@ -38,6 +38,7 @@ This makes the Pure Web regression candidate a stable comparison point while per
 - `schemas/google_drive_store.yaml` — provider-specific physical mapping; not a canonical domain schema.
 - `dist/KITCHEN_SKILL_WEB_GOOGLE_DRIVE_LIVE_COOKING.md` — deployable Web + Drive bundle.
 - `tests/persistence/01_google_drive_cross_session_resume.md` — cross-session acceptance scenario, intentionally outside the existing Pure Web manifest.
+- `tests/persistence/PROVIDER_SMOKE_TEST.md` — record of the real Drive/Sheets primitive smoke test performed during implementation.
 
 ## Google Drive v1 store
 
@@ -79,9 +80,19 @@ If Drive is unavailable or a durable commit fails:
 
 ## Validation status
 
-The provider contract has been matched to currently available Web-host Drive/Sheets primitives: store discovery, bounded range reads, row search, native spreadsheet creation, and batched spreadsheet updates.
+A real Web-host Drive/Sheets smoke test has passed for the provider primitives used by this slice:
 
-The repository now defines the cross-session A/B acceptance test, but this development commit does **not** claim that a real Chat A -> fresh Chat B Drive recovery run has already passed. That is the next validation step.
+- native spreadsheet creation;
+- one-batch tab/header initialization;
+- bounded `META` range read;
+- bounded STATE row search;
+- one-batch `ACTIVE_TASK` + `META` revision update plus Event append;
+- bounded readback of the updated ActiveTask and appended Event;
+- cleanup of the temporary test spreadsheet.
+
+This validates the physical provider operations, not the complete product behavior.
+
+The repository also defines the real cross-session A/B acceptance test, but **Chat A -> fresh Chat B recovery has not yet been executed and must not be reported as passed**. That is the next validation step.
 
 ## Architecture docs
 
