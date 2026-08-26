@@ -1,0 +1,56 @@
+suite: pure_web_live_cooking_v0_5
+candidate_skill: SKILL.md
+runtime_assumption: WEB_CHAT_CONTEXT_ONLY
+suite_runs: 3
+
+generation_protocol:
+  - fetch README.md and this manifest
+  - fetch candidate_skill
+  - for each suite run, start with no simulated durable kitchen memory
+  - for each test, fetch only the test script before generating candidate responses
+  - do not fetch tests/EVALUATION_RUBRIC.md or tests/expectations/* until every candidate transcript in that suite run is frozen
+  - process scripted user messages sequentially; never batch-answer the whole scenario
+  - each test starts with a fresh isolated ActiveTask unless the test file explicitly says otherwise
+  - do not modify candidate skill during a suite run
+
+tests:
+  - script: tests/01_frozen_beef_long_session.md
+    expectations: tests/expectations/01_frozen_beef_long_session.md
+  - script: tests/02_state_conflict_reanchor.md
+    expectations: tests/expectations/02_state_conflict_reanchor.md
+  - script: tests/03_decision_changing_questions.md
+    expectations: tests/expectations/03_decision_changing_questions.md
+  - script: tests/04_context_noise_stress.md
+    expectations: tests/expectations/04_context_noise_stress.md
+
+evaluation_protocol:
+  - after all four test transcripts for one suite run are frozen, fetch all four expectation files and tests/EVALUATION_RUBRIC.md
+  - score the 18 rubric criteria once against the combined evidence from that entire suite run
+  - record exact failing test and turn for any 0 or 1
+  - do not retroactively regenerate candidate responses after evaluator files are loaded
+
+pass_gate_per_suite_run:
+  total_score_min: 32
+  total_score_max: 36
+  no_zero_criteria: [1, 2, 4, 9, 12, 13, 15, 16]
+
+suite_pass_rule:
+  required_passing_runs: 3
+  total_runs: 3
+
+report:
+  include:
+    - score_by_suite_run
+    - score_by_criterion_for_each_run
+    - exact_failure_test_and_turns
+    - failure_classification
+    - minimal_patch_recommendations
+    - repository_structure_defects
+    - limitations_of_simulated_testing
+  failure_classification_values:
+    - domain_logic
+    - state_retrieval
+    - health_reanchor
+    - instruction_leak
+    - repository_or_harness
+  github_issue_title_prefix: "Regression report: Pure Web Live Cooking"
