@@ -1,10 +1,20 @@
 ModuleResult:
   response: string
-  active_task_patch: map?
-  state_observations: [map]
-  experience_observations: [map]
-  health_signals: [string]
+  changes: ChangeSet?
+  health_signals: [string]?
+  completion:
+    task_completed: boolean?
+    task_paused: boolean?
+  confidence: map?
 
-pure_web_note:
-  - patches are logical/conversational only in the v0.5 Pure Web implementation
-  - no durable persistence is implied
+  compatibility_shorthand:
+    active_task_patch: map?
+    state_observations: [map]?
+    experience_observations: [map]?
+
+rules:
+  - new durable implementations prefer changes: ChangeSet
+  - existing Pure Web Cooking shorthand is normalized by PersistenceCoordinator before durable write
+  - compatibility shorthand is not a second provider write path
+  - DomainModule never writes StorageProvider directly
+  - no durable persistence is implied until PersistenceCoordinator receives a durable provider success receipt

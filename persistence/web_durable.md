@@ -1,0 +1,117 @@
+# Persistence Coordinator — Web Durable Slice
+
+## Responsibility
+
+This is the single semantic write path for Web + durable provider deployments.
+
+It converts domain/health write intent into validated canonical mutations, then delegates physical writes to the selected StorageProvider.
+
+Cooking and Health never write Google Drive directly.
+
+## Input compatibility
+
+The existing Pure Web Cooking implementation predates the durable `ChangeSet` field and conceptually emits:
+
+- `active_task_patch`;
+- `state_observations`;
+- `experience_observations`;
+- health signals.
+
+To avoid rewriting Cooking logic, this coordinator accepts that shape as compatibility shorthand and normalizes it into one canonical `ChangeSet` before validation.
+
+Normalization is an implementation detail, not a second write interface.
+
+## Compatibility normalization
+
+Conceptual mapping:
+
+```text
+active_task_patch
+  -> ChangeSet.active_task_ops
+
+state_observations
+  -> ChangeSet.state_ops
+
+experience_observations
+  -> ChangeSet.experience_ops
+
+end-of-task meaningful facts
+  -> optional ChangeSet.event_appends + state/experience updates + ActiveTask completion/clear
+```
+
+New modules should prefer emitting `ChangeSet` directly, but the provider must not care which module-result syntax produced it.
+
+## Validation
+
+Before provider commit, enforce:
+
+1. schema/path validity;
+2. current user observation is not overwritten by older lower-priority evidence;
+3. unknown is not converted to zero/false/absent;
+4. approximate amounts remain approximate after arithmetic;
+5. exactness can degrade but cannot increase without evidence;
+6. Event records are append-only;
+7. canonical IDs remain stable;
+8. secrets/credentials are not written to Kitchen data;
+9. expected/global revision is not stale when revision information is available.
+
+## Amount subtraction rule
+
+Example:
+
+```text
+inventory says ~500 g beef
+cooking observation says ~120 g used
+```
+
+The result may be represented as approximately 380 g or an uncertainty range, but **not** exact 380 g.
+
+If unit conversion or source precision is unclear, preserve uncertainty or mark the result unknown rather than fabricate precision.
+
+## Commit flow
+
+1. Read current `META.global_revision` and only the affected records needed for validation/row addressing.
+2. Normalize and validate the ChangeSet.
+3. Resolve semantic operations into canonical post-write records.
+4. Build one `StorageMutationBatch` containing all related state/task/experience/event/meta mutations.
+5. Ask the StorageProvider to commit the batch.
+6. Return `durable_committed` only when durable provider write succeeds.
+7. On success, use the new revision as the session continuity authority.
+
+For the Google Sheets provider, task/state/experience/event/meta changes for one turn should be sent in one spreadsheet batch when practical.
+
+## ActiveTask completion
+
+When Cooking ends, one semantic commit may:
+
+- apply known KitchenState deltas;
+- append a compact Event if useful;
+- upsert/merge tentative Experience evidence when warranted;
+- mark/clear the ActiveTask;
+- set `Meta.active_task_id = null`;
+- advance global revision.
+
+Do not preserve the entire cooking transcript as task history.
+
+## Stale revision
+
+If the current store revision differs from `ChangeSet.base_global_revision`:
+
+- do not blindly overwrite;
+- refresh only Meta + affected records;
+- re-evaluate the semantic write against current evidence;
+- if the change cannot be safely rebased, return deferred/rejected and retain it as a session-level pending change.
+
+v1 does not attempt concurrent multi-client merge.
+
+## Provider failure
+
+If commit fails:
+
+- current cooking guidance continues when safe;
+- do not tell the user the change was durably saved;
+- retain the newest logical ActiveTask/pending changes in session context when possible;
+- emit a storage-degraded Health signal;
+- retry only when relevant/provider becomes available.
+
+Storage housekeeping must not displace the user's immediate cooking task.

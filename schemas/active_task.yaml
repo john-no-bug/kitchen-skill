@@ -1,14 +1,29 @@
 ActiveTask:
-  type: cooking
+  meta:
+    id: string?
+    revision: integer?
+    created_at: string?
+    updated_at: string?
+    provenance: map?
+  type:
+    enum: [cooking, shopping, planning, inventory_refresh, other]
+  status:
+    enum: [active, paused, completed, cancelled]
+    optional: true          # Pure Web compatibility; defaults logically to active
   goal: string
   phase: string?
-  state: map            # sparse; only facts relevant to the active dish
-  completed: [string]
-  next: [string]
-  open_issues: [string]
-  updated_at: string?   # optional in Pure Web
+  state: map               # sparse; only facts relevant to the active task
+  completed: [any]?
+  next: [any]?
+  open_issues: [any]?
+  related_recipe: map?
+  started_at: string?
+  updated_at: string?
 
 rules:
   - newest direct observation overrides conflicting older state
-  - completed major milestones are never returned to pending unless user explicitly reverses them
+  - completed major milestones are never returned to pending unless the user explicitly reverses them
   - unknown values remain unknown
+  - persisted implementations use stable meta.id and monotonic revision when supported
+  - Pure Web may omit persistence-only metadata without invalidating the logical ActiveTask
+  - ActiveTask is current operational state, not a transcript or history log

@@ -1,56 +1,91 @@
-# Kitchen Skill — v0.5 Pure Web Live Cooking Vertical Slice
+# Kitchen Skill — v0.6 Web + Google Drive Persistence Vertical Slice
 
-Status: regression-testable vertical slice  
-Baseline: Kitchen System v0.4 frozen architecture + v0.5 interface/schema draft
+Status: first durable Web persistence slice layered on the existing Pure Web Live Cooking candidate  
+Architecture baseline: frozen v0.4 + v0.5 interface/schema draft
 
-## Goal
+## Current milestone
 
-Validate one narrow hypothesis before durable storage is added:
+The repository now contains two deliberately separate Web deployments:
 
-> Live cooking can remain state-consistent through a long ordinary web-chat session without requiring a database, platform memory, hidden scratchpad, or user-managed checkpoint.
+1. **Pure Web** — `WEB_CHAT + CONTEXT_ONLY`, still used by the existing regression harness.
+2. **Web + Google Drive** — `WEB_CHAT + GoogleDriveProvider`, using a bounded Google Sheets-backed Kitchen store.
 
-## Implemented
+The purpose of the new slice is to validate one architecture claim:
 
-- Pure Web (`WEB_CHAT + CONTEXT_ONLY`)
-- Live Cooking
-- logical `ActiveTask`
-- bounded context selection
-- state precedence and correction rules
-- lightweight Monitor/Doctor re-anchor
-- adversarial regression suite with evaluator-only expectations
+> Live Cooking domain behavior can survive a fresh chat through durable shared storage without rewriting Cooking logic or loading full history.
 
-Not implemented yet: durable persistence, Google Drive/Tencent Docs/Notion providers, Codex persistence, full inventory, shopping, planning, scheduled checks, or cross-session continuity.
+## Preserved Pure Web baseline
 
-## Repository map
+The following remain unchanged by the persistence slice:
 
-- `SKILL.md` — canonical Pure Web candidate used by tests.
-- `dist/KITCHEN_SKILL_WEB_LIVE_COOKING.md` — distribution copy.
-- `core/kernel.md` — orchestration/invariants.
-- `modules/cooking/contract.md` and `logic.md` — domain contract and behavior.
-- `runtime/web_ephemeral.md` — Pure Web runtime semantics.
-- `retrieval/web_ephemeral.md` — bounded context selection.
-- `health/web_ephemeral.md` — Monitor/Doctor re-anchor.
-- `schemas/` — minimal schemas for this slice.
-- `tests/manifest.yaml` — authoritative automated regression protocol.
-- `tests/01_*` ... `tests/04_*` — candidate-visible scripts only.
-- `tests/expectations/` — evaluator-only expectations loaded after transcript freeze.
-- `tests/EVALUATION_RUBRIC.md` — 18 criteria / 36 points.
-- `demo/DEMO_SESSION_PROMPT.md` — single prompt for a fresh session with GitHub access.
-- `docs/` — v0.4 rollback baseline and v0.5 interface/schema draft.
+- `SKILL.md`
+- `dist/KITCHEN_SKILL_WEB_LIVE_COOKING.md`
+- `modules/cooking/contract.md`
+- `modules/cooking/logic.md`
+- the four-scenario default regression harness in `tests/manifest.yaml`
 
-## Automated demo
+This makes the Pure Web regression candidate a stable comparison point while persistence is developed independently.
 
-In a fresh session with GitHub access, paste `demo/DEMO_SESSION_PROMPT.md`. It will retrieve the repository and run three suite runs without requiring you to manually send every test turn.
+## Added durable Web slice
 
-The automated harness is useful for regression testing, but it is not identical to real host-level context truncation. Keep a small number of true multi-turn platform tests before declaring Pure Web production-ready.
+- `runtime/web_persistent.md` — Web runtime semantics when an external persistent provider is available.
+- `providers/google_drive.md` — Google Drive `StorageProvider` implementation profile using one native Google Sheet.
+- `retrieval/web_google_drive.md` — bounded persistent Context Retriever.
+- `persistence/web_durable.md` — durable PersistenceCoordinator and compatibility normalization from the existing Cooking result shape.
+- `health/web_google_drive.md` — persistent-storage health/re-anchor behavior.
+- `schemas/change_set.yaml` — semantic write intent.
+- `schemas/storage_provider.yaml` — provider contract used by the slice.
+- `schemas/google_drive_store.yaml` — provider-specific physical mapping; not a canonical domain schema.
+- `dist/KITCHEN_SKILL_WEB_GOOGLE_DRIVE_LIVE_COOKING.md` — deployable Web + Drive bundle.
+- `tests/persistence/01_google_drive_cross_session_resume.md` — cross-session acceptance scenario, intentionally outside the existing Pure Web manifest.
 
-## Pass gate
+## Google Drive v1 store
 
-Each suite run evaluates all four scenarios together against the 18-criterion rubric:
+The first provider uses **one native Google Sheet** as the Kitchen store. It keeps only the minimum persistence domains required by the vertical slice:
 
-- maximum 36;
-- pass >= 32;
-- no zero on criteria 1, 2, 4, 9, 12, 13, 15, or 16;
-- current v0.5 gate requires all 3 suite runs to pass.
+- `META`
+- `STATE`
+- `ACTIVE_TASK`
+- `EXPERIENCES`
+- `EVENTS`
 
-Patch failed interface boundaries, not wording differences. Prefer the smallest change that restores the invariant.
+Canonical objects remain provider-neutral. The Sheet is only a physical mapping. `payload_json` stores canonical records; small projection columns exist only to support bounded bootstrap/search and are updated in the same provider commit.
+
+Normal Live Cooking retrieval does **not** read the whole Sheet. It normally loads:
+
+- the tiny `META` projection;
+- the one current `ACTIVE_TASK` row;
+- only task-relevant `STATE` rows;
+- at most 1–2 relevant `EXPERIENCE` rows;
+- no `EVENTS` unless explicitly required.
+
+## Write path
+
+The write invariant remains:
+
+`Cooking / Health -> ChangeSet -> PersistenceCoordinator -> GoogleDriveProvider`
+
+The current Cooking module still emits its existing logical task/state/experience observations. `PersistenceCoordinator` contains a compatibility normalization step that turns that shape into a canonical `ChangeSet` before durable write. Provider APIs never enter Cooking logic.
+
+## Failure behavior
+
+If Drive is unavailable or a durable commit fails:
+
+- current cooking assistance continues when safe;
+- the response must not claim a durable save;
+- pending changes remain session-level when possible;
+- Health receives a storage-degraded signal;
+- the system can temporarily behave like Pure Web rather than blocking the user.
+
+## Validation status
+
+The provider contract has been matched to currently available Web-host Drive/Sheets primitives: store discovery, bounded range reads, row search, native spreadsheet creation, and batched spreadsheet updates.
+
+The repository now defines the cross-session A/B acceptance test, but this development commit does **not** claim that a real Chat A -> fresh Chat B Drive recovery run has already passed. That is the next validation step.
+
+## Architecture docs
+
+- `docs/Kitchen_System_v0.4_Frozen_Architecture.md` remains the untouched rollback baseline.
+- `docs/Kitchen_System_v0.5_Interface_and_Schema_Draft.md` remains the current formal interface/schema architecture.
+
+The v0.6 label is an implementation milestone, not a replacement architecture document.

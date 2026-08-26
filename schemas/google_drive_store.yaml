@@ -1,0 +1,90 @@
+GoogleDriveSheetStore:
+  provider_profile: google_drive_sheets_v1
+  file:
+    preferred_title: Kitchen Skill Store
+    mime_type: application/vnd.google-apps.spreadsheet
+    identity_marker:
+      store_format: kitchen-skill-google-sheets-v1
+    schema_version: 0.6-drive-slice-1
+
+  tabs:
+    META:
+      max_data_rows: 1
+      columns:
+        - store_format
+        - store_id
+        - schema_version
+        - global_revision
+        - active_task_id
+        - last_activity_at
+        - health_status
+        - payload_json
+      canonical_payload: Meta
+
+    STATE:
+      columns:
+        - domain
+        - id
+        - revision
+        - updated_at
+        - lookup_keys
+        - payload_json
+      domains:
+        - _root
+        - inventory
+        - equipment
+        - preferences
+        - plans
+      root_record:
+        domain: _root
+        id: kitchen_state
+        payload: KitchenState.RecordMeta
+      canonical_payload: KitchenState child record
+
+    ACTIVE_TASK:
+      max_data_rows: 1
+      columns:
+        - id
+        - type
+        - status
+        - revision
+        - updated_at
+        - goal
+        - phase
+        - lookup_keys
+        - payload_json
+      canonical_payload: ActiveTask
+
+    EXPERIENCES:
+      columns:
+        - id
+        - key
+        - kind
+        - status
+        - confidence
+        - evidence_count
+        - last_observed_at
+        - tags
+        - lookup_keys
+        - payload_json
+      canonical_payload: Experience
+
+    EVENTS:
+      append_only: true
+      columns:
+        - id
+        - type
+        - occurred_at
+        - task_id
+        - entity_keys
+        - payload_json
+      canonical_payload: Event
+
+rules:
+  - payload_json contains the canonical record; projection/search columns are provider implementation details
+  - lookup_keys are derived and rebuildable, never canonical truth
+  - normal Live Cooking must not load whole tabs into model context
+  - ACTIVE_TASK is current operational state, not task history
+  - EVENTS are cold and excluded from normal retrieval
+  - secrets and provider credentials are forbidden
+  - sequential multi-client use only; concurrent write merge is out of scope

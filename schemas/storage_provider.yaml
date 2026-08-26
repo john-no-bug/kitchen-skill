@@ -1,0 +1,53 @@
+StorageCapabilities:
+  durable_read: boolean
+  durable_write: boolean
+  partial_update: boolean
+  append: boolean
+  structured_query: boolean
+  text_search: boolean
+  shared_remote: boolean
+  transactional_write: boolean
+
+ReadRequest:
+  collection:
+    enum: [meta, state, active_task, recipes, experiences, events]
+  ids: [string]?
+  paths: [string]?
+  filters: map?
+  limit: integer?
+  order: map?
+
+SearchRequest:
+  collections: [string]
+  query_text: string?
+  entity_refs: [map]?
+  tags: [string]?
+  filters: map?
+  limit: integer
+
+StorageMutationBatch:
+  batch_id: string
+  expected_global_revision: integer?
+  mutations: [StorageMutation]
+  event_appends: [Event]?
+  metadata: map?
+
+StorageMutation:
+  collection: string
+  record_id: string?
+  operation:
+    enum: [upsert, replace, remove, clear]
+  value: any?
+
+StorageWriteReceipt:
+  success: boolean
+  durable: boolean
+  new_global_revision: integer?
+  written_ids: [string]?
+  warnings: [string]?
+
+rules:
+  - provider is business-agnostic and never interprets beef/recipes/cooking semantics
+  - ContextRetriever is the normal read caller
+  - PersistenceCoordinator is the normal write caller
+  - provider-specific physical addresses never leak into DomainModule

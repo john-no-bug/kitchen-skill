@@ -1,0 +1,28 @@
+ChangeSet:
+  change_id: string
+  reason: string?
+  base_global_revision: integer?
+  state_ops: [PatchOperation]?
+  active_task_ops: [PatchOperation]?
+  recipe_ops: [PatchOperation]?
+  experience_ops: [PatchOperation]?
+  meta_ops: [PatchOperation]?
+  event_appends: [Event]?
+  durability_preference:
+    enum: [best_effort, session_ok, durable_preferred, durable_required]
+    optional: true
+
+PatchOperation:
+  op:
+    enum: [set, merge, add, subtract, remove, clear, upsert]
+  path: string
+  value: any?
+  confidence: map?
+  provenance: map?
+
+rules:
+  - semantic validation happens in PersistenceCoordinator before provider commit
+  - subtract preserves uncertainty; approximate input must not silently become exact
+  - current user observation outranks lower-priority stored evidence
+  - Event appends are immutable after commit except provider-required maintenance metadata
+  - ChangeSet is provider-neutral; no Drive/Sheets row or API details are allowed
