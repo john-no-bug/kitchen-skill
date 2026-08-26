@@ -1,0 +1,10 @@
+ModuleResult:
+  response: string
+  active_task_patch: map?
+  state_observations: [map]
+  experience_observations: [map]
+  health_signals: [string]
+
+pure_web_note:
+  - patches are logical/conversational only in the v0.5 Pure Web implementation
+  - no durable persistence is implied
