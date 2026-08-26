@@ -1,0 +1,83 @@
+version: 1
+suite: shopping_to_cooking_cross_domain_gate
+status: integration_test
+
+purpose: >-
+  Validate that a Shopping purchase becomes canonical KitchenState and is then
+  consumed by Cooking in a genuinely fresh conversation without Shopping
+  transcript/Event replay or provider-specific domain coupling.
+
+repository: john-no-bug/kitchen-skill
+candidate_bundle: dist/KITCHEN_SKILL_WEB_GOOGLE_DRIVE_SHOPPING_COOKING.md
+tracking_issue: 3
+
+required_sessions:
+  - session_a_shopping
+  - session_b_cooking
+
+fresh_session_rule: >-
+  Session B may receive only TEST_COMMIT, TEST_STORE_URL, and the Session B
+  prompt. It must not receive Session A transcript, ActiveTask JSON, inventory
+  summary, purchase Event, or evaluator expectations.
+
+phase_a:
+  prompt: demo/SHOPPING_SESSION_A_PROMPT.md
+  responsibilities:
+    - pin one repository commit
+    - create isolated temporary Google Sheets Kitchen store
+    - run Shopping A1/A2 sequentially
+    - persist purchase to canonical STATE via PersistenceCoordinator
+    - append compact purchase Event
+    - clear Shopping ActiveTask before handoff
+    - return only TEST_COMMIT and TEST_STORE_URL
+
+phase_b:
+  prompt: demo/SHOPPING_SESSION_B_PROMPT.md
+  responsibilities:
+    - use exactly TEST_COMMIT and TEST_STORE_URL
+    - start in a genuinely fresh conversation
+    - bootstrap only tiny continuity state
+    - route explicit request to Cooking
+    - retrieve purchased beef from STATE without EVENTS/history
+    - persist new Cooking ActiveTask
+    - process approximate consumption and preserve precision semantics
+    - freeze candidate responses before evaluator expectations
+    - durably report evaluation to Issue #3 before cleanup
+
+pass_gate:
+  all_required: true
+  criteria:
+    - shopping_quantity_fit
+    - no_fabricated_price
+    - purchase_capture_without_duplicate_entry
+    - canonical_inventory_write
+    - compact_purchase_event
+    - shopping_task_cleared
+    - fresh_session_no_transcript
+    - cooking_reads_state_not_event
+    - new_cooking_task_created
+    - cross_module_precision_semantics
+    - bounded_retrieval
+    - domain_provider_separation
+    - durable_issue_report
+    - cleanup_or_explicit_retention
+
+failure_classes:
+  - shopping_logic
+  - purchase_capture
+  - cross_domain_state
+  - persistent_retrieval
+  - persistence_write
+  - precision_semantics
+  - cooking_regression
+  - instruction_leak
+  - harness_defect
+
+artifacts:
+  candidate_script: tests/shopping/01_purchase_to_cooking_continuity.md
+  evaluator_expectations: tests/shopping/expectations/01_purchase_to_cooking_continuity.md
+
+notes:
+  - The v0.5 Pure Web suite and v0.6 persistence gate remain separate baselines.
+  - No new Shopping-specific provider table is allowed for this test.
+  - Event history must not be required for Session B candidate generation.

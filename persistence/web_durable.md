@@ -4,9 +4,9 @@
 
 This is the single semantic write path for Web + durable provider deployments.
 
-It converts domain/health write intent into validated canonical mutations, then delegates physical writes to the selected StorageProvider.
+It converts DomainModule/Health write intent into validated canonical mutations, then delegates physical writes to the selected StorageProvider.
 
-Cooking and Health never write Google Drive directly.
+Cooking, Shopping, and Health never write Google Drive directly.
 
 ## Input compatibility
 
@@ -18,6 +18,8 @@ The existing Pure Web Cooking implementation predates the durable `ChangeSet` fi
 - health signals.
 
 To avoid rewriting Cooking logic, this coordinator accepts that shape as compatibility shorthand and normalizes it into one canonical `ChangeSet` before validation.
+
+New durable modules, including Shopping, should prefer emitting `ChangeSet` directly.
 
 Normalization is an implementation detail, not a second write interface.
 
@@ -39,7 +41,7 @@ end-of-task meaningful facts
   -> optional ChangeSet.event_appends + state/experience updates + ActiveTask completion/clear
 ```
 
-New modules should prefer emitting `ChangeSet` directly, but the provider must not care which module-result syntax produced it.
+The provider must not care which ModuleResult syntax produced the ChangeSet.
 
 ## Validation
 
@@ -60,11 +62,13 @@ Before provider commit, enforce:
 Example:
 
 ```text
-inventory says ~500 g beef
-cooking observation says ~120 g used
+inventory says exact 500 g beef from a labelled purchased package
+cooking observation says approximately 120 g used
 ```
 
-The result may be represented as approximately 380 g or an uncertainty range, but **not** exact 380 g.
+The result may be represented as approximately 380 g or an uncertainty range, but **not** exact 380 g because the subtraction includes approximate evidence.
+
+Likewise, `~500 g - ~120 g` remains approximate.
 
 If unit conversion or source precision is unclear, preserve uncertainty or mark the result unknown rather than fabricate precision.
 
@@ -78,11 +82,27 @@ If unit conversion or source precision is unclear, preserve uncertainty or mark 
 6. Return `durable_committed` only when durable provider write succeeds.
 7. On success, use the new revision as the session continuity authority.
 
-For the Google Sheets provider, task/state/experience/event/meta changes for one turn should be sent in one spreadsheet batch when practical.
+For the Google Sheets provider, related task/state/experience/event/meta changes for one user turn should be sent in one spreadsheet batch when practical.
+
+## Shopping purchase commit
+
+A confirmed purchase is a normal semantic commit, not a special provider path.
+
+One Shopping ChangeSet may:
+
+- upsert the purchased inventory item in KitchenState at the precision supported by the observation/package label;
+- append a compact `purchase_inventory` Event;
+- complete/clear the Shopping ActiveTask;
+- set `Meta.active_task_id = null`;
+- advance global revision.
+
+Do not ask the user to re-enter the purchase into inventory after they already confirmed it.
+
+The next Cooking task reads the resulting KitchenState; it does not need to retrieve the purchase Event.
 
 ## ActiveTask completion
 
-When Cooking ends, one semantic commit may:
+When an operational task ends, one semantic commit may:
 
 - apply known KitchenState deltas;
 - append a compact Event if useful;
@@ -91,7 +111,7 @@ When Cooking ends, one semantic commit may:
 - set `Meta.active_task_id = null`;
 - advance global revision.
 
-Do not preserve the entire cooking transcript as task history.
+Do not preserve the entire task transcript as task history.
 
 ## Stale revision
 
@@ -99,7 +119,7 @@ If the current store revision differs from `ChangeSet.base_global_revision`:
 
 - do not blindly overwrite;
 - refresh only Meta + affected records;
-- re-evaluate the semantic write against current evidence;
+- re-evaluate the semantic change against current evidence;
 - if the change cannot be safely rebased, return deferred/rejected and retain it as a session-level pending change.
 
 v1 does not attempt concurrent multi-client merge.
@@ -108,10 +128,10 @@ v1 does not attempt concurrent multi-client merge.
 
 If commit fails:
 
-- current cooking guidance continues when safe;
+- current cooking/shopping guidance continues when safe/useful;
 - do not tell the user the change was durably saved;
 - retain the newest logical ActiveTask/pending changes in session context when possible;
 - emit a storage-degraded Health signal;
 - retry only when relevant/provider becomes available.
 
-Storage housekeeping must not displace the user's immediate cooking task.
+Storage housekeeping must not displace the user's immediate kitchen task.

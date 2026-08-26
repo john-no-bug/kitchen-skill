@@ -1,0 +1,102 @@
+# Kitchen Skill v0.7 Cross-Domain Integration — Session B (Fresh Cooking)
+
+This must run in a **genuinely fresh conversation**.
+
+Before this prompt is executed, the user must provide exactly:
+
+- `TEST_COMMIT: <40-char SHA>`
+- `TEST_STORE_URL: <exact temporary Google Sheet URL>`
+
+Do not request or accept Session A transcript, inventory/state summary, purchase Event, ActiveTask JSON, or evaluator notes. If such state content is provided, mark the run invalid with `harness_defect`.
+
+## Repository pinning
+
+Use exactly `TEST_COMMIT`. Do not follow current main if it differs.
+
+Read pinned:
+
+- `dist/KITCHEN_SKILL_WEB_GOOGLE_DRIVE_SHOPPING_COOKING.md`
+- `modules/cooking/contract.md`
+- `modules/cooking/logic.md`
+- `modules/shopping/contract.md`
+- `modules/shopping/logic.md`
+- `persistence/web_durable.md`
+- `providers/google_drive.md`
+- `retrieval/web_google_drive.md`
+- `tests/shopping/manifest.yaml`
+- `tests/shopping/01_purchase_to_cooking_continuity.md`
+
+Do **not** read `tests/shopping/expectations/*` until B1 and B2 responses are frozen.
+
+## Store isolation and bootstrap
+
+Use exactly `TEST_STORE_URL`. Do not search for/switch to another store.
+
+Before B1:
+
+1. verify the store marker with a tiny META read;
+2. bootstrap only META plus current ActiveTask if META points to one;
+3. do not read EVENTS during normal bootstrap;
+4. route B1 from the explicit Cooking request;
+5. only then retrieve task-specific relevant STATE rows, including ground beef.
+
+The previous Shopping conversation is unavailable by design.
+
+## Candidate execution
+
+Process B1 and B2 exact user messages sequentially.
+
+### B1
+
+Generate the Cooking response from the current B1 observation plus bounded persisted state. Do not retrieve purchase EVENTS for normal candidate generation. Persist a new Cooking ActiveTask when meaningful through PersistenceCoordinator/provider before B2.
+
+### B2
+
+Use the exact B2 message. Apply the approximate consumption observation through semantic persistence, preserving uncertainty. Produce current Live Cooking guidance. Persist B2 changes before evaluation.
+
+Do not rewrite B1 after seeing B2.
+
+## Freeze and evaluate
+
+After B2 provider write:
+
+1. freeze B1/B2 user-facing responses;
+2. record actual provider reads/writes;
+3. only now read `tests/shopping/expectations/01_purchase_to_cooking_continuity.md` pinned to TEST_COMMIT;
+4. evaluate all criteria against frozen responses and bounded store evidence;
+5. do not regenerate candidate responses to improve score.
+
+## Durable test reporting — mandatory
+
+Before deleting or modifying the test store for cleanup, write one complete frozen evaluation as a comment to:
+
+`john-no-bug/kitchen-skill` Issue #3
+
+The comment must include:
+
+- TEST_COMMIT;
+- TEST_STORE_URL;
+- overall PASS/FAIL;
+- every criterion result;
+- failure class for every failure;
+- frozen B1/B2 responses;
+- candidate-phase bounded reads;
+- A2 purchase write evidence;
+- B1/B2 durable write evidence;
+- proof Shopping task was cleared before Session B;
+- latest ground-beef precision/amount after B2.
+
+If GitHub result writeback fails, overall result is `FAIL`, class `harness_defect`; retain the store and do not close Issue #3.
+
+## Cleanup
+
+If evaluation PASS and Issue #3 result comment exists:
+
+1. delete the temporary Sheet;
+2. verify it is unavailable;
+3. append a cleanup receipt to Issue #3;
+4. close Issue #3 as completed.
+
+If any required criterion fails, retain the Sheet for debugging, explicitly report `TEST_STORE_RETAINED_FOR_DEBUGGING`, and keep Issue #3 open.
+
+Do not modify production Kitchen data or candidate repository files during the test.
