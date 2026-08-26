@@ -1,4 +1,4 @@
-version: 1
+version: 2
 suite: web_google_drive_persistence_gate
 status: integration_test
 
@@ -9,6 +9,7 @@ purpose: >-
 
 repository: john-no-bug/kitchen-skill
 candidate_bundle: dist/KITCHEN_SKILL_WEB_GOOGLE_DRIVE_LIVE_COOKING.md
+tracking_issue: 2
 
 required_sessions:
   - session_a_writer
@@ -38,8 +39,20 @@ phase_b:
     - do not use Session A conversation history
     - bootstrap from bounded persistent state
     - continue the cooking task from the persisted physical state
-    - process one newer direct observation and persist the correction
+    - process B1 and B2 sequentially
+    - durably persist the corrected B1 task state before B2
+    - durably persist the B2 onion-added task state
     - freeze the candidate transcript before reading evaluator-only expectations
+    - write the complete frozen evaluation result to GitHub Issue 2 before cleanup
+
+result_sink:
+  repository: john-no-bug/kitchen-skill
+  issue: 2
+  required: true
+  rules:
+    - missing GitHub result writeback is a harness_defect and forces FAIL
+    - on FAIL retain the temporary store and leave Issue 2 open
+    - on PASS record results first, then delete the store, record cleanup, and close Issue 2 completed
 
 pass_gate:
   all_required: true
@@ -49,10 +62,13 @@ pass_gate:
     - correct_active_task_resume
     - no_completed_step_restart
     - current_observation_overrides_store
+    - b1_corrected_state_durable_writeback
+    - b2_onion_added_durable_writeback
     - persistence_coordinator_write_path
     - honest_durability_claim
     - event_history_not_loaded_by_default
     - cooking_domain_has_no_provider_api_dependency
+    - durable_github_test_report
     - cleanup_or_explicit_test_store_retention
 
 failure_classes:
@@ -72,3 +88,4 @@ notes:
   - The v0.5 Pure Web regression suite is a separate frozen baseline and is not rerun by this manifest.
   - A provider primitive smoke test is not sufficient to pass this gate.
   - The test store is temporary test data, not the user's production Kitchen store.
+  - A completed user-facing Session B report is not sufficient unless the same result is durably written to Issue 2.
