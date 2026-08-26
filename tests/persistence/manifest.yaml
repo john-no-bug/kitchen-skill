@@ -1,0 +1,74 @@
+version: 1
+suite: web_google_drive_persistence_gate
+status: integration_test
+
+purpose: >-
+  Validate that the already-passing Pure Web Live Cooking domain behavior can
+  survive a genuinely fresh chat through the Google Drive Kitchen store without
+  relying on prior conversation history or loading unbounded history.
+
+repository: john-no-bug/kitchen-skill
+candidate_bundle: dist/KITCHEN_SKILL_WEB_GOOGLE_DRIVE_LIVE_COOKING.md
+
+required_sessions:
+  - session_a_writer
+  - session_b_reader
+
+fresh_session_rule: >-
+  Session B must be a genuinely new conversation. It may receive only the
+  repository/commit identifier, the exact test-store URL or ID produced by
+  Session A, and the Session B test prompt. It must not receive Session A chat
+  transcript, ActiveTask JSON, state summary, or evaluator expectations.
+
+phase_a:
+  prompt: demo/PERSISTENCE_SESSION_A_PROMPT.md
+  responsibilities:
+    - pin one repository commit
+    - create an isolated temporary Google Sheets Kitchen store
+    - initialize only the v0.6 minimum store schema
+    - execute the scripted cooking observations sequentially through the candidate bundle
+    - persist the resulting ActiveTask and relevant state through the documented write path
+    - return only TEST_COMMIT and TEST_STORE_URL for Session B
+
+phase_b:
+  prompt: demo/PERSISTENCE_SESSION_B_PROMPT.md
+  responsibilities:
+    - pin exactly TEST_COMMIT from Session A
+    - use exactly TEST_STORE_URL from Session A
+    - do not use Session A conversation history
+    - bootstrap from bounded persistent state
+    - continue the cooking task from the persisted physical state
+    - process one newer direct observation and persist the correction
+    - freeze the candidate transcript before reading evaluator-only expectations
+
+pass_gate:
+  all_required: true
+  criteria:
+    - fresh_session_continuity
+    - bounded_bootstrap
+    - correct_active_task_resume
+    - no_completed_step_restart
+    - current_observation_overrides_store
+    - persistence_coordinator_write_path
+    - honest_durability_claim
+    - event_history_not_loaded_by_default
+    - cooking_domain_has_no_provider_api_dependency
+    - cleanup_or_explicit_test_store_retention
+
+failure_classes:
+  - provider_resolution
+  - persistent_retrieval
+  - persistence_write
+  - state_precedence
+  - cooking_regression
+  - instruction_leak
+  - harness_defect
+
+artifacts:
+  evaluator_expectations: tests/persistence/expectations/01_google_drive_cross_session_resume.md
+  prior_provider_smoke_test: tests/persistence/PROVIDER_SMOKE_TEST.md
+
+notes:
+  - The v0.5 Pure Web regression suite is a separate frozen baseline and is not rerun by this manifest.
+  - A provider primitive smoke test is not sufficient to pass this gate.
+  - The test store is temporary test data, not the user's production Kitchen store.
