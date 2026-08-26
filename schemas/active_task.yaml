@@ -1,0 +1,14 @@
+ActiveTask:
+  type: cooking
+  goal: string
+  phase: string?
+  state: map            # sparse; only facts relevant to the active dish
+  completed: [string]
+  next: [string]
+  open_issues: [string]
+  updated_at: string?   # optional in Pure Web
+
+rules:
+  - newest direct observation overrides conflicting older state
+  - completed major milestones are never returned to pending unless user explicitly reverses them
+  - unknown values remain unknown
