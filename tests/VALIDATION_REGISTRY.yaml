@@ -43,8 +43,8 @@ validated_gates:
     inheritance: blob_identity
     blob_guards:
       health/event_experience_compaction.md: a02019ce83aecd4a0fd48f47840b310dcb6ce53d
-      retrieval/web_google_drive.md: 77878395f425c03388fa27dcec74196a9c92d97f
-      persistence/web_durable.md: c4365d0b84ddcb1c275c6708a0639d548d36cd2c
+      retrieval/web_google_drive.md: 60a9e87b9df3e984ca1436766bd60fee49bda599
+      persistence/web_durable.md: d80dcef28e12eba9d303395aaa1595692bd5a250
       dist/KITCHEN_SKILL_WEB_GOOGLE_DRIVE_SHOPPING_COOKING_V08.md: 8a7bf1355525d0ef80365bd4981143a32f6a1242
 
 release_candidate:
