@@ -34,8 +34,6 @@ def git_blob_sha(path: Path) -> str:
 def require_path(value: str, source: Path) -> None:
     if value.startswith(("http://", "https://")):
         return
-    # Only treat compact path-like scalars as repository references. Narrative
-    # strings in manifests may end with a path but are not themselves paths.
     if any(ch.isspace() for ch in value):
         return
     allowed_prefixes = (
@@ -76,9 +74,6 @@ def scan_references(obj, source: Path) -> None:
 
 
 def check_machine_yaml_files() -> None:
-    # Some legacy schemas use YAML-like notation as human-readable contracts
-    # rather than strict machine YAML. Parse machine manifests/configs here;
-    # google_drive_store.yaml is validated separately below.
     for base in (ROOT / "tests", ROOT / "dist"):
         for path in sorted(base.rglob("*.yaml")):
             data = load_yaml(path)
@@ -199,11 +194,55 @@ def check_no_legacy_top_level_schema() -> None:
             fail(f"Deprecated top-level schema object reintroduced: {path.name}")
 
 
+def check_release_active_task_shape() -> None:
+    path = ROOT / "tests" / "release" / "active_task_shape.yaml"
+    data = load_yaml(path)
+    if not isinstance(data, dict):
+        return
+
+    expected_allowed = {
+        "meta", "type", "status", "goal", "phase", "state", "completed", "next",
+        "open_issues", "related_recipe", "started_at", "updated_at",
+    }
+    expected_required = {"meta", "type", "status", "goal", "state"}
+    expected_forbidden = {
+        "ingredient_states", "equipment_state", "completed_milestones",
+        "next_actions", "pan_state", "inventory_refs",
+    }
+
+    if data.get("source_contract") != "schemas/active_task.yaml":
+        fail("Release ActiveTask fixture must derive from schemas/active_task.yaml")
+    if set(data.get("allowed_top_level") or []) != expected_allowed:
+        fail("Release ActiveTask allowed_top_level drifted from canonical contract")
+    if set(data.get("required_top_level") or []) != expected_required:
+        fail("Release ActiveTask required_top_level drifted from persisted release contract")
+    if set(data.get("forbidden_module_specific_top_level") or []) != expected_forbidden:
+        fail("Release ActiveTask forbidden top-level sentinel set changed")
+    if set(data.get("required_meta_fields") or []) != {"id", "revision"}:
+        fail("Release persisted ActiveTask must require meta.id and meta.revision")
+
+    b_prompt = (ROOT / "demo" / "RELEASE_SESSION_B_PROMPT.md").read_text(encoding="utf-8")
+    scenario = (ROOT / "tests" / "release" / "01_current_head_composite_regression.md").read_text(encoding="utf-8")
+    required_markers = [
+        "tests/release/active_task_shape.yaml",
+        "ACTIVE_TASK_SHAPE_VALID: true",
+        "state",
+        "completed",
+        "next",
+    ]
+    for marker in required_markers:
+        if marker not in b_prompt:
+            fail(f"Release Session B prompt missing canonical ActiveTask marker: {marker}")
+    if "tests/release/active_task_shape.yaml" not in scenario:
+        fail("Release scenario must bind Session B to active_task_shape.yaml")
+
+
 def check_release_files() -> None:
     required = [
         "docs/Kitchen_System_v0.8_Validated_Baseline.md",
         "tests/VALIDATION_REGISTRY.yaml",
         "dist/deployments.yaml",
+        "tests/release/active_task_shape.yaml",
         "tests/release/manifest.yaml",
         "tests/release/01_current_head_composite_regression.md",
         "tests/release/expectations/01_current_head_composite_regression.md",
@@ -232,6 +271,7 @@ def main() -> int:
     check_google_drive_store()
     check_domain_provider_separation()
     check_no_legacy_top_level_schema()
+    check_release_active_task_shape()
     check_release_files()
 
     if ERRORS:
@@ -246,6 +286,7 @@ def main() -> int:
     print("- Pure Web fallback identity preserved")
     print("- Google Drive five-tab schema preserved")
     print("- Domain/provider separation preserved")
+    print("- release ActiveTask harness shape is canonical")
     print("- release-hardening assets present")
     return 0
 
