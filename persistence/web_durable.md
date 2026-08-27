@@ -55,7 +55,8 @@ Before provider commit, enforce:
 6. Event records are append-only;
 7. canonical IDs remain stable;
 8. secrets/credentials are not written to Kitchen data;
-9. expected/global revision is not stale when revision information is available.
+9. expected/global revision is not stale when revision information is available;
+10. Experience evidence aggregation does not grow canonical payloads proportionally to raw Event count.
 
 ## Amount subtraction rule
 
@@ -99,6 +100,42 @@ One Shopping ChangeSet may:
 Do not ask the user to re-enter the purchase into inventory after they already confirmed it.
 
 The next Cooking task reads the resulting KitchenState; it does not need to retrieve the purchase Event.
+
+## Event → Experience compaction commits
+
+Compaction is a Health maintenance write, not a provider feature and not a DomainModule shortcut.
+
+Logical path:
+
+`HealthEngine -> RepairPlan/ChangeSet -> PersistenceCoordinator -> StorageProvider`
+
+For a compatible Event evidence cluster, one compaction ChangeSet may:
+
+- upsert/merge one or more existing Experience records by stable `meta.id` + semantic `key`;
+- increment `evidence_count` only for newly accepted unique Event refs;
+- update compact confidence/status/timestamps;
+- retain only a bounded representative set of `evidence_event_refs` (Web default: maximum 8);
+- update `Meta.last_compaction_at` after successful durable commit;
+- advance global revision.
+
+It must **not** delete, rewrite, or mark the supporting Events as consumed. Event history remains append-only cold audit data.
+
+### Experience merge validation
+
+Before commit:
+
+1. confirm candidate events are semantically compatible with the target Experience key/conditions;
+2. deduplicate evidence refs before incrementing `evidence_count`;
+3. preserve the stable Experience record ID/key for compatible merges;
+4. do not copy raw transcript text into Experience;
+5. do not let `evidence_event_refs` grow beyond the configured cap;
+6. do not upgrade numeric exactness merely because repeated evidence exists;
+7. do not average explicit contradictory user observations;
+8. exclude `superseded`/`retired` records from automatic merge targets unless a repair explicitly addresses them.
+
+A large raw evidence count may increase the scalar `evidence_count`; it must not cause Experience payload size to grow linearly.
+
+If the provider write fails, `Meta.last_compaction_at` must not advance and the compaction ChangeSet may remain pending/deferred like other semantic writes.
 
 ## ActiveTask completion
 

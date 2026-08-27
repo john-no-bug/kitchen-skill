@@ -1,90 +1,65 @@
-# Kitchen Skill — v0.7 Validated Cross-Domain Slice + Reliability Gate
+# Kitchen Skill — v0.8 Event/Experience Compaction + Long-History Bounded Context
 
-Status: v0.7 Shopping -> canonical KitchenState -> fresh Cooking has passed; provider degradation/failure injection is the current reliability gate  
+Status: v0.8 implementation/harness ready for real integration gate  
 Architecture baseline: frozen v0.4 + v0.5 interface/schema draft
 
 ## Validated baselines
 
-### v0.5 — Pure Web Live Cooking
+### v0.5 — Pure Web Live Cooking ✅
 
-The frozen Pure Web candidate remains unchanged and passed all three required regression suite runs at 36/36.
+The frozen Pure Web candidate passed the required 3 × 36/36 regression runs.
 
-Preserved files include:
+### v0.6 — Web + Google Drive persistence ✅
 
-- `SKILL.md`
-- `dist/KITCHEN_SKILL_WEB_LIVE_COOKING.md`
-- `modules/cooking/contract.md`
-- `modules/cooking/logic.md`
-- `tests/manifest.yaml`
+Real Chat A -> fresh Chat B continuity passed in GitHub Issue #2:
 
-### v0.6 — Web + Google Drive persistence
-
-The real two-conversation persistence gate passed at commit `354ba039d8ce56edec7789f01541d3899481c576` and is recorded in GitHub Issue #2.
-
-Validated behavior includes:
-
-- fresh Chat B recovery from Drive without Chat A transcript;
 - bounded META + ActiveTask bootstrap;
-- current observation overriding persisted stale physical state;
-- B1/B2 durable ActiveTask writeback;
-- no full Event/history loading for normal Cooking;
-- approximate arithmetic remaining approximate;
-- result writeback/cleanup harness behavior.
+- newest direct observation overrides persisted stale physical state;
+- durable writeback works across fresh chats;
+- normal Cooking retrieval does not load Event history.
 
-That normal continuity gate intentionally did not inject a provider failure.
+### v0.7 — Shopping -> canonical KitchenState -> fresh Cooking ✅
 
-### v0.7 — Shopping -> canonical state -> fresh Cooking
+Real cross-domain gate passed in GitHub Issue #3:
 
-The repaired-harness integration gate passed at commit `375a8f61a40409e93c757d6c6f93117e4c31cb86` and is recorded in GitHub Issue #3.
+- Shopping purchase becomes canonical inventory + compact purchase Event;
+- Shopping ActiveTask clears;
+- fresh Cooking reads STATE rather than Shopping transcript/Event history;
+- exact 500 g minus approximately 120 g becomes approximately 380 g.
 
-Validated behavior includes:
+### Reliability — provider degradation/retry ✅
 
-- Shopping choosing a 500 g package for about 350 g planned use without fabricating price/freshness facts;
-- purchase confirmation becoming canonical inventory without duplicate data entry;
-- compact append-only `purchase_inventory` Event;
-- Shopping ActiveTask cleared before handoff;
-- genuinely fresh Cooking session receiving no Shopping transcript/state summary;
-- Cooking retrieving purchased beef from bounded STATE rather than Event history;
-- new Cooking ActiveTask using the shared canonical state;
-- exact 500 g minus approximately 120 g becoming `Amount.mode=approximate` around 380 g;
-- no Shopping-specific provider table and no provider API dependency in DomainModules;
-- evaluator evidence escrow preserving fresh-session isolation while still making Session A behavior auditable;
-- PASS result writeback followed by verified temporary-store cleanup.
+Real failure injection passed in GitHub Issue #5:
 
-This proves Shopping and Cooking can cooperate through canonical KitchenState rather than shared chat history or provider-specific coupling.
+- provider read and write failures were real Google Sheets 404s;
+- safe Cooking guidance continued;
+- no false durable-success claim;
+- failed semantic change remained session-pending;
+- valid-store revision did not advance on failed write;
+- recovery retried the pending ChangeSet and advanced revision exactly once.
 
-## Current reliability gate — provider degradation / failure injection
+## v0.8 architecture claim
 
-The next task is to exercise failure behavior already documented by the durable Web runtime, PersistenceCoordinator, and HealthEngine. This is a reliability test, not a new domain feature.
+The next frozen invariant to validate is:
 
-Relevant existing contracts already say that provider failure must:
+> History growth must not cause proportional ContextPack growth.
 
-- keep safe live guidance moving using session working state when possible;
-- avoid claiming persistent recovery/read success when a read failed;
-- avoid claiming durable save when a write failed;
-- retain failed semantic changes as session-pending state;
-- preserve valid-store revision integrity on failed commit;
-- retry/rebase the pending semantic change after provider recovery;
-- keep provider error mechanics outside Cooking/Shopping logic.
+The v0.8 slice formalizes the relationship:
 
-The degradation suite uses one dedicated conversation and two isolated test Sheets:
+`raw append-only Events -> Health compaction -> compact Experience -> bounded normal retrieval`
 
-1. one valid Kitchen test store;
-2. one sacrificial Sheet deleted immediately so its dead ID can deterministically force real provider read/write failures without corrupting the valid store.
+Events remain cold audit history. Compaction does **not** delete/rewrite them in this slice.
 
-Test artifacts:
+## v0.8 implementation additions
 
-- `tests/degradation/manifest.yaml`
-- `tests/degradation/01_provider_failure_and_recovery.md`
-- `tests/degradation/expectations/01_provider_failure_and_recovery.md`
-- `tests/degradation/README.md`
-- `demo/DEGRADATION_FAILURE_INJECTION_PROMPT.md`
+- `health/event_experience_compaction.md` — bounded Health maintenance profile for Event -> Experience aggregation.
+- `retrieval/web_google_drive.md` — Experience ranking/status filtering, evidence-ref non-dereference, explicit long-history invariant.
+- `persistence/web_durable.md` — Experience merge/evidence-count/ref-cap validation and compaction commit semantics.
+- `dist/KITCHEN_SKILL_WEB_GOOGLE_DRIVE_SHOPPING_COOKING_V08.md` — v0.8 deployable behavior bundle.
 
-The fault injection happens outside DomainModules and must not enter canonical Kitchen data.
+No new canonical object, interface, provider, or Google Sheets tab is introduced.
 
-## Provider/store shape remains unchanged
-
-No new physical storage schema has been added. Google Drive still uses exactly:
+The durable store remains exactly:
 
 - `META`
 - `STATE`
@@ -92,22 +67,93 @@ No new physical storage schema has been added. Google Drive still uses exactly:
 - `EXPERIENCES`
 - `EVENTS`
 
-Do not add a degradation table, retry table, vector database, or another provider just to satisfy the reliability test.
+## Compaction semantics
 
-## Next after reliability gate
+Repeated compatible Event evidence merges into one stable Experience.
 
-If degradation/failure injection passes, proceed to durable Event/Experience compaction and long-history validation:
+Example:
 
-- increase cold Event history substantially;
-- keep normal ContextPack bounded;
-- derive/retrieve only compact reusable Experience evidence;
-- verify history growth does not cause proportional model-context growth.
+`frozen_ground_beef:supor_green_pot`
 
-Only after that should provider breadth (Notion, Tencent Docs, Codex/local storage, etc.) become a major implementation target.
+A compaction pass may:
+
+- select a bounded set of matching Event evidence;
+- merge unique compatible refs into the existing Experience;
+- increment scalar `evidence_count`;
+- keep summary/conditions/learned_value compact;
+- retain at most 8 representative/recent `evidence_event_refs` in the Web slice;
+- update `Meta.last_compaction_at` only after successful durable commit.
+
+Supporting Events remain append-only.
+
+Compaction runs through:
+
+`HealthEngine -> RepairPlan/ChangeSet -> PersistenceCoordinator -> StorageProvider`
+
+DomainModules do not write providers directly.
+
+## Normal retrieval after large history
+
+Normal Cooking:
+
+- META + ActiveTask tiny bootstrap;
+- relevant current STATE;
+- at most 1–2 Experience rows;
+- 0 Events by default.
+
+Normal Shopping:
+
+- relevant current STATE/plans;
+- at most 1 Experience row;
+- 0 Events by default.
+
+Selected Experience `evidence_event_refs` do not trigger Event reads merely because they exist.
+
+Superseded/retired Experiences are excluded by default.
+
+## v0.8 real integration gate
+
+Tracking issue: GitHub Issue #6.
+
+Harness:
+
+- `tests/history/manifest.yaml`
+- `tests/history/01_long_history_compaction_and_bounded_context.md`
+- `tests/history/expectations/01_long_history_compaction_and_bounded_context.md`
+- `tests/history/README.md`
+- `demo/HISTORY_COMPACTION_LONG_CONTEXT_PROMPT.md`
+
+The gate uses one isolated native Google Sheet and one dedicated test conversation.
+
+It compares identical Cooking/Shopping retrieval probes under:
+
+1. tiny history;
+2. 2000 Event rows + 122+ Experience rows after bounded compaction.
+
+The gate verifies:
+
+- normal retrieval still reads zero Events;
+- Experience counts remain within fixed domain limits;
+- relevant active Experience beats irrelevant/superseded noise;
+- selected persisted-record context size stays near the tiny-history baseline instead of scaling with history;
+- 17 new compatible Event observations merge into the existing Experience (`evidence_count 3 -> 20`);
+- Experience evidence refs remain <=8;
+- all 2000 Events remain present;
+- current user observation still outranks Experience.
+
+**This v0.8 real long-history gate has not yet been executed and must not be reported as passed.**
+
+## Next after v0.8 gate
+
+If the real compaction/long-history gate passes:
+
+1. freeze the v0.8 history behavior as a validated baseline;
+2. then decide whether the next highest-value expansion is another shared provider (Notion/Tencent Docs), Codex/local storage, or broader domain coverage;
+3. do not add a vector database unless a demonstrated retrieval failure requires one.
 
 ## Architecture docs
 
-- `docs/Kitchen_System_v0.4_Frozen_Architecture.md` — untouched rollback baseline.
-- `docs/Kitchen_System_v0.5_Interface_and_Schema_Draft.md` — current formal interface/schema architecture.
+- `docs/Kitchen_System_v0.4_Frozen_Architecture.md` — rollback baseline.
+- `docs/Kitchen_System_v0.5_Interface_and_Schema_Draft.md` — formal interface/canonical schema baseline.
 
-The v0.7 label remains an implementation milestone, not a replacement architecture document.
+The v0.8 label is an implementation milestone, not a replacement architecture document.

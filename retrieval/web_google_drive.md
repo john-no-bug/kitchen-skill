@@ -51,6 +51,26 @@ Default slots:
 
 Do not load the entire pantry merely to compare two package sizes.
 
+## Experience candidate selection and ranking
+
+Experience is the reusable history-facing object. Event evidence behind an Experience must not be dereferenced during normal retrieval.
+
+Provider search may select a bounded candidate set using `key`, `subject_refs`, tags, entity/name terms, and small projection fields. Before using an Experience in reasoning, read its canonical payload.
+
+Rank compatible candidates in this order:
+
+1. exact subject/key/condition relevance to the current task;
+2. `status=active` over `status=tentative`;
+3. current-condition match over generic similarity;
+4. higher evidence-backed confidence / evidence_count when otherwise comparable;
+5. newer `last_observed_at` when freshness matters.
+
+By default exclude `superseded` and `retired` Experiences.
+
+Do not choose an Experience merely because it is newer if it is less relevant.
+
+Do not retrieve Events referenced by `evidence_event_refs` merely to justify an already-selected Experience. Event dereference requires an explicit audit/debug/repair reason.
+
 ## Suggested hard limits for this slice
 
 ```yaml
@@ -60,9 +80,23 @@ max_events: 0
 max_recipes: 1
 ```
 
-Shopping should normally need fewer records than these limits.
+Shopping should normally need fewer records than these limits and should normally use at most one Experience.
 
 These are implementation defaults, not canonical schema limits.
+
+## Long-history invariant
+
+Total Event/Experience history size must not determine normal ContextPack size.
+
+If the store grows from tens to thousands of Events or from a few to hundreds of Experiences:
+
+- bootstrap remains META + current ActiveTask only;
+- Cooking still selects at most 1–2 Experience payloads;
+- Shopping still selects at most 1 Experience payload;
+- Events remain zero by default;
+- irrelevant/superseded Experiences are not added merely because context budget is available.
+
+`evidence_count` may grow inside one selected compact Experience. `evidence_event_refs` must remain capped by the compaction policy so the selected Experience itself does not grow linearly with raw evidence count.
 
 ## Lookup strategy
 
@@ -89,7 +123,8 @@ When retrieved storage conflicts with the newest message:
 Examples:
 
 - stored Cooking task says beef water level is high; user says no visible pooled water and sizzling -> use the current observation;
-- inventory says 500 g beef was purchased; user now says approximately 120 g was used -> preserve the new consumption observation and reduce remaining precision accordingly.
+- inventory says 500 g beef was purchased; user now says approximately 120 g was used -> preserve the new consumption observation and reduce remaining precision accordingly;
+- Experience says frozen beef in one pot often releases water; current user says this batch is already dry/sizzling -> current observation wins.
 
 ## Freshness
 

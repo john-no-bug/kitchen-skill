@@ -1,0 +1,120 @@
+version: 1
+suite: event_experience_compaction_long_history_gate
+status: integration_test
+
+purpose: >-
+  Validate that repeated compatible Event evidence compacts into bounded Experience
+  records and that normal Cooking/Shopping ContextPack size remains structurally
+  bounded when the durable store grows to thousands of Events and hundreds of
+  Experiences.
+
+repository: john-no-bug/kitchen-skill
+candidate_bundle: dist/KITCHEN_SKILL_WEB_GOOGLE_DRIVE_SHOPPING_COOKING_V08.md
+tracking_issue: 6
+
+required_sessions:
+  - single_history_compaction_session
+
+runner: demo/HISTORY_COMPACTION_LONG_CONTEXT_PROMPT.md
+candidate_script: tests/history/01_long_history_compaction_and_bounded_context.md
+evaluator_expectations: tests/history/expectations/01_long_history_compaction_and_bounded_context.md
+
+history_targets:
+  event_rows_total: 2000
+  experience_rows_min: 122
+  compactable_event_count_initial: 3
+  compactable_event_count_new: 17
+  relevant_experience_evidence_before: 3
+  relevant_experience_evidence_after: 20
+  evidence_event_refs_max: 8
+
+normal_retrieval_limits:
+  max_state_records: 12
+  max_cooking_experiences: 2
+  max_shopping_experiences: 1
+  max_events: 0
+  max_recipes: 1
+
+phase_baseline:
+  - create isolated compatible Google Sheets Kitchen store
+  - seed tiny canonical current state
+  - seed 3 already-compacted matching Events
+  - seed 1 relevant Cooking Experience with evidence_count 3
+  - seed 1 relevant Shopping Experience
+  - capture baseline Cooking ContextPack evidence
+  - capture baseline Shopping ContextPack evidence
+
+phase_growth:
+  - append 17 new compatible Events plus 1980 irrelevant/noise Events
+  - upsert at least 120 irrelevant/superseded Experience rows
+  - verify total Event history reaches 2000 rows
+  - do not alter the current direct-task facts used by the probes
+
+phase_compaction:
+  - run bounded Health maintenance selection for the matching Event key
+  - read at most 64 candidate Events and at most 8 existing Experiences into compaction reasoning
+  - merge exactly the 17 new compatible unique Event refs into the existing relevant Experience
+  - preserve stable Experience id/key
+  - evidence_count becomes 20
+  - evidence_event_refs remains <= 8
+  - leave all Event rows append-only and unchanged
+  - update Meta.last_compaction_at only through a successful PersistenceCoordinator/provider commit
+
+phase_long_history_probe:
+  - rerun the same Cooking retrieval probe
+  - rerun the same Shopping retrieval probe
+  - normal probes must not read EVENTS
+  - compare selected ContextPack record counts and deterministic selected-record byte sizes with baseline
+
+pass_gate:
+  all_required: true
+  criteria:
+    - tiny_history_baseline_captured
+    - large_history_seeded
+    - events_remain_append_only
+    - compatible_events_merge_into_stable_experience
+    - experience_evidence_count_correct
+    - experience_evidence_refs_capped
+    - compact_experience_payload_not_linear
+    - compaction_uses_health_persistence_path
+    - meta_compaction_watermark_updates_after_success
+    - cooking_context_experience_limit_respected
+    - cooking_context_events_zero
+    - shopping_context_experience_limit_respected
+    - shopping_context_events_zero
+    - relevant_experience_selected_over_noise
+    - superseded_experience_excluded
+    - current_observation_outranks_experience
+    - long_history_context_size_not_proportional
+    - no_event_dereference_from_experience
+    - domain_provider_separation_preserved
+    - evaluator_loaded_after_freeze
+    - durable_issue_report
+    - cleanup_completed
+
+failure_classes:
+  - compaction_selection
+  - experience_merge
+  - experience_payload_growth
+  - retrieval_boundedness
+  - event_leakage
+  - evidence_precedence
+  - persistence_write
+  - domain_coupling
+  - harness_defect
+
+cleanup_policy:
+  pass:
+    - write frozen result to Issue #6
+    - delete temporary Sheet
+    - verify unavailable
+    - append cleanup receipt
+    - close Issue #6 completed
+  fail:
+    - retain temporary Sheet
+    - keep Issue #6 open
+
+notes:
+  - Event compaction in v0.8 is logical Event -> Experience aggregation; raw Events are not deleted.
+  - Provider-internal scanning cost is distinct from model ContextPack size. Only bounded candidate outputs may enter reasoning context.
+  - No vector database or new provider table is allowed for this gate.
