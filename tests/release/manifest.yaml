@@ -1,0 +1,119 @@
+version: 1
+suite: current_head_release_composite_regression
+status: release_gate
+repository: john-no-bug/kitchen-skill
+tracking_issue: 7
+candidate_bundle: dist/KITCHEN_SKILL_WEB_GOOGLE_DRIVE_SHOPPING_COOKING_V08.md
+validation_registry: tests/VALIDATION_REGISTRY.yaml
+deployments: dist/deployments.yaml
+
+purpose: >-
+  Validate the current release-candidate HEAD across fresh-session persistence,
+  Shopping-to-Cooking canonical handoff, precision semantics, real failed-write
+  pending state, bounded recovery retry, and release evidence inheritance.
+
+required_sessions:
+  - release_session_a_shopping
+  - release_session_b_fresh_cooking_and_reliability
+
+fresh_session_rule: >-
+  Session B may receive only TEST_COMMIT, TEST_STORE_URL, DEAD_TARGET_URL,
+  and the Session B prompt. It must not receive Session A transcript, canonical
+  state summary, Event payload, ActiveTask payload, evaluator expectations, or
+  Session A escrow contents.
+
+phase_a:
+  prompt: demo/RELEASE_SESSION_A_PROMPT.md
+  responsibilities:
+    - pin exact current main as TEST_COMMIT
+    - create isolated valid Kitchen Sheet
+    - create and permanently delete sacrificial dead-target Sheet
+    - run Shopping A1/A2
+    - persist exact 500 g purchase and clear Shopping task
+    - write non-evaluative frozen Session A evidence to Issue #7
+    - return only TEST_COMMIT, TEST_STORE_URL, DEAD_TARGET_URL
+
+phase_b:
+  prompt: demo/RELEASE_SESSION_B_PROMPT.md
+  responsibilities:
+    - start genuinely fresh
+    - use exactly the three handoff values
+    - keep Issue #7 comments and evaluator expectations unread before B1-B4 freeze
+    - retrieve purchased beef from STATE with zero candidate Event reads
+    - persist approximate 120 g consumption as approximate remaining amount
+    - freeze B3 newest observation and semantic change before real dead-target write
+    - prove failed write does not advance valid-store revision or partially mutate state
+    - retain B3 change session-pending
+    - restore valid target and bounded-retry pending change
+    - freeze B4 continuation from recovered newest state
+    - evaluate inherited blob guards and current-head composite criteria after freeze
+    - report frozen result to Issue #7 before cleanup
+
+inherited_gates:
+  pure_web_live_cooking:
+    source_issue: 1
+    rule: blob_identity
+  event_experience_long_history:
+    source_issue: 6
+    rule: blob_identity
+
+pass_gate:
+  all_required: true
+  criteria:
+    - validation_registry_guards_match
+    - static_validation_pass
+    - session_a_shopping_quantity_fit
+    - purchase_capture_without_duplicate_entry
+    - canonical_exact_inventory_write
+    - shopping_task_cleared
+    - fresh_session_no_transcript
+    - cooking_reads_state_not_event
+    - approximate_consumption_preserves_uncertainty
+    - newest_observation_controls_failed_write_turn
+    - real_provider_write_failure
+    - no_false_durable_success
+    - failed_change_retained_session_pending
+    - failed_write_revision_integrity
+    - no_partial_failed_state
+    - bounded_retry_refresh
+    - pending_retry_uses_normal_persistence_path
+    - retry_advances_revision_once
+    - recovered_state_matches_newest_observation
+    - bounded_retrieval_no_event_leakage
+    - inherited_pure_web_blob_identity
+    - inherited_history_blob_identity
+    - domain_provider_separation_preserved
+    - evaluator_loaded_after_freeze
+    - durable_issue_report
+    - cleanup_or_explicit_retention
+
+failure_classes:
+  - release_registry
+  - static_validation
+  - shopping_regression
+  - persistent_retrieval
+  - precision_semantics
+  - degraded_write_handling
+  - false_durability_claim
+  - pending_change_loss
+  - retry_recovery
+  - revision_integrity
+  - event_leakage
+  - domain_coupling
+  - harness_defect
+
+artifacts:
+  candidate_script: tests/release/01_current_head_composite_regression.md
+  evaluator_expectations: tests/release/expectations/01_current_head_composite_regression.md
+
+cleanup:
+  pass:
+    - write frozen result to Issue #7
+    - delete valid temporary Kitchen Sheet
+    - verify unavailable/not-found
+    - append cleanup receipt
+    - leave Issue #7 open for the development session to perform final registry/docs freeze commit and release/tag
+  fail:
+    - retain valid store for debugging
+    - write explicit retention marker
+    - keep Issue #7 open

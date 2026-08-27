@@ -1,0 +1,42 @@
+version: 1
+
+deployments:
+  pure_web:
+    status: validated_fallback
+    runtime: WEB_CHAT
+    storage: CONTEXT_ONLY
+    entrypoint: SKILL.md
+    distribution: dist/KITCHEN_SKILL_WEB_LIVE_COOKING.md
+    validation_gate: 1
+    validated_blob: 37a8d15bb376579a9a33ede514b121dff04c249d
+    capabilities:
+      - live_cooking
+      - session_context_only
+
+  web_google_drive_v08:
+    status: component_validated_release_candidate
+    runtime: WEB_CHAT
+    storage: GoogleDriveProvider
+    entrypoint: dist/KITCHEN_SKILL_WEB_GOOGLE_DRIVE_SHOPPING_COOKING_V08.md
+    component_validation_gate: 6
+    release_gate: 7
+    base_product_commit: a0a8979e412ab254eb9095b9d5ccf21747bc8c63
+    capabilities:
+      - live_cooking
+      - shopping
+      - durable_shared_state
+      - fresh_session_continuity
+      - provider_degradation_retry
+      - event_experience_compaction
+      - bounded_long_history_context
+
+historical_bundles:
+  - path: dist/KITCHEN_SKILL_WEB_GOOGLE_DRIVE_LIVE_COOKING.md
+    milestone: v0.6
+  - path: dist/KITCHEN_SKILL_WEB_GOOGLE_DRIVE_SHOPPING_COOKING.md
+    milestone: v0.7
+
+rules:
+  - Root SKILL.md is the validated Pure Web fallback and is not silently replaced by a durable-provider bundle.
+  - web_google_drive_v08 must not be called a validated release until Issue #7 passes and the validation registry is updated.
+  - Historical bundles remain available for rollback/debugging and are not the latest deployment identity.

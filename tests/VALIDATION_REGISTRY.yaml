@@ -1,0 +1,70 @@
+version: 1
+repository: john-no-bug/kitchen-skill
+
+architecture:
+  rollback_baseline: docs/Kitchen_System_v0.4_Frozen_Architecture.md
+  formal_interface_schema: docs/Kitchen_System_v0.5_Interface_and_Schema_Draft.md
+  validated_addendum: docs/Kitchen_System_v0.8_Validated_Baseline.md
+
+validated_gates:
+  pure_web_live_cooking:
+    status: validated
+    issue: 1
+    tested_commit: f45192435fd8e55cbc72759e65c52e2e25d3b3f5
+    evidence: "3 x 36/36 PASS"
+    inheritance: blob_identity
+    blob_guards:
+      SKILL.md: 37a8d15bb376579a9a33ede514b121dff04c249d
+      dist/KITCHEN_SKILL_WEB_LIVE_COOKING.md: 37a8d15bb376579a9a33ede514b121dff04c249d
+
+  web_google_drive_fresh_session:
+    status: validated
+    issue: 2
+    tested_commit: 354ba039d8ce56edec7789f01541d3899481c576
+    evidence: "real Chat A -> fresh Chat B PASS"
+
+  shopping_to_cooking_cross_domain:
+    status: validated
+    issue: 3
+    tested_commit: 375a8f61a40409e93c757d6c6f93117e4c31cb86
+    evidence: "Shopping purchase -> canonical STATE -> fresh Cooking PASS"
+
+  provider_degradation_retry:
+    status: validated
+    issue: 5
+    tested_commit: 10d68c46861becc41e83681bfc3ba0bae027e106
+    evidence: "real provider read/write 404 failure + pending retry PASS"
+
+  event_experience_long_history:
+    status: validated
+    issue: 6
+    tested_commit: a0a8979e412ab254eb9095b9d5ccf21747bc8c63
+    evidence: "2000 Events + 122 Experiences bounded-context/compaction PASS"
+    inheritance: blob_identity
+    blob_guards:
+      health/event_experience_compaction.md: a02019ce83aecd4a0fd48f47840b310dcb6ce53d
+      retrieval/web_google_drive.md: 77878395f425c03388fa27dcec74196a9c92d97f
+      persistence/web_durable.md: c4365d0b84ddcb1c275c6708a0639d548d36cd2c
+      dist/KITCHEN_SKILL_WEB_GOOGLE_DRIVE_SHOPPING_COOKING_V08.md: 8a7bf1355525d0ef80365bd4981143a32f6a1242
+
+release_candidate:
+  name: v0.8.1
+  status: pending_composite_gate
+  tracking_issue: 7
+  base_product_commit: a0a8979e412ab254eb9095b9d5ccf21747bc8c63
+  candidate_ref: main
+  required_static_validation: true
+  required_composite_suite: tests/release/manifest.yaml
+  release_allowed_when:
+    - static_validation_pass
+    - composite_gate_pass
+    - cleanup_verified
+    - registry_status_updated_to_validated_release
+    - release_docs_synchronized
+
+rules:
+  - A gate result may be inherited only when its declared inheritance guard still matches.
+  - A documentation/test/CI-only commit may inherit guarded product evidence when product blobs are unchanged.
+  - A product-bearing change to a guarded file invalidates inherited evidence for that gate until rerun.
+  - Issue closure alone is not a replacement for exact tested commit and evidence identity.
+  - No release is validated while release_candidate.status is pending_composite_gate.
