@@ -1,0 +1,2 @@
+This file intentionally marks the degradation/failure-injection harness as a separate reliability gate.
+The authoritative test revision is the repository commit that includes this file and all degradation harness artifacts.
