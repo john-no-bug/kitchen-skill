@@ -14,18 +14,24 @@ deployments:
       - session_context_only
 
   web_google_drive_v08:
-    status: component_validated_release_candidate
+    status: validated_release
+    release_version: v0.8.1
     runtime: WEB_CHAT
     storage: GoogleDriveProvider
     entrypoint: dist/KITCHEN_SKILL_WEB_GOOGLE_DRIVE_SHOPPING_COOKING_V08.md
     component_validation_gate: 6
     release_gate: 7
     base_product_commit: a0a8979e412ab254eb9095b9d5ccf21747bc8c63
+    composite_tested_commit: d3c1fac7ea4de7e3d83dd198ce9799d82ed7c81b
+    release_result_comment: 5441221465
+    cleanup_comment: 5441226472
+    release_record: docs/RELEASE_v0.8.1.md
     capabilities:
       - live_cooking
       - shopping
       - durable_shared_state
       - fresh_session_continuity
+      - canonical_active_task_persistence
       - provider_degradation_retry
       - event_experience_compaction
       - bounded_long_history_context
@@ -38,5 +44,6 @@ historical_bundles:
 
 rules:
   - Root SKILL.md is the validated Pure Web fallback and is not silently replaced by a durable-provider bundle.
-  - web_google_drive_v08 must not be called a validated release until Issue #7 passes and the validation registry is updated.
-  - Historical bundles remain available for rollback/debugging and are not the latest deployment identity.
+  - web_google_drive_v08 is the validated durable Web deployment only while Issue #7 release evidence and validation-registry blob guards remain valid.
+  - Product-bearing changes to guarded files require the relevant validation gate to be rerun before retaining validated_release status.
+  - Historical bundles remain available for rollback/debugging and are not the latest durable deployment identity.
