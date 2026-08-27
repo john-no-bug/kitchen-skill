@@ -5,6 +5,7 @@ architecture:
   rollback_baseline: docs/Kitchen_System_v0.4_Frozen_Architecture.md
   formal_interface_schema: docs/Kitchen_System_v0.5_Interface_and_Schema_Draft.md
   validated_addendum: docs/Kitchen_System_v0.8_Validated_Baseline.md
+  release_record: docs/RELEASE_v0.8.1.md
 
 validated_gates:
   pure_web_live_cooking:
@@ -47,19 +48,35 @@ validated_gates:
       persistence/web_durable.md: d80dcef28e12eba9d303395aaa1595692bd5a250
       dist/KITCHEN_SKILL_WEB_GOOGLE_DRIVE_SHOPPING_COOKING_V08.md: 8a7bf1355525d0ef80365bd4981143a32f6a1242
 
+  current_head_composite_release:
+    status: validated
+    issue: 7
+    tested_commit: d3c1fac7ea4de7e3d83dd198ce9799d82ed7c81b
+    evidence: "50/50 applicable composite criteria PASS; real failed-write 404 + canonical ActiveTask retry"
+    result_comment: 5441221465
+    cleanup_comment: 5441226472
+    static_validation_run: 33083694868
+    inheritance: metadata_only_release_freeze
+
 release_candidate:
   name: v0.8.1
-  status: pending_composite_gate
+  status: validated_release
   tracking_issue: 7
   base_product_commit: a0a8979e412ab254eb9095b9d5ccf21747bc8c63
-  candidate_ref: main
+  composite_tested_commit: d3c1fac7ea4de7e3d83dd198ce9799d82ed7c81b
+  composite_result_comment: 5441221465
+  cleanup_comment: 5441226472
+  static_validation_run: 33083694868
+  release_record: docs/RELEASE_v0.8.1.md
+  release_ref: main
   required_static_validation: true
   required_composite_suite: tests/release/manifest.yaml
-  release_allowed_when:
+  validated_conditions:
     - static_validation_pass
     - composite_gate_pass
+    - canonical_active_task_shape_pass
     - cleanup_verified
-    - registry_status_updated_to_validated_release
+    - registry_status_validated_release
     - release_docs_synchronized
 
 rules:
@@ -67,4 +84,4 @@ rules:
   - A documentation/test/CI-only commit may inherit guarded product evidence when product blobs are unchanged.
   - A product-bearing change to a guarded file invalidates inherited evidence for that gate until rerun.
   - Issue closure alone is not a replacement for exact tested commit and evidence identity.
-  - No release is validated while release_candidate.status is pending_composite_gate.
+  - validated_release means the composite tested commit passed and subsequent release-freeze changes are metadata/docs/CI-only with static validation passing.
