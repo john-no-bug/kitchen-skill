@@ -1,6 +1,6 @@
-# Kitchen Skill — v0.7 Shopping → Canonical State → Cooking
+# Kitchen Skill — v0.7 Validated Cross-Domain Slice + Reliability Gate
 
-Status: first cross-domain vertical slice layered on the validated v0.6 Web + Google Drive persistence path  
+Status: v0.7 Shopping -> canonical KitchenState -> fresh Cooking has passed; provider degradation/failure injection is the current reliability gate  
 Architecture baseline: frozen v0.4 + v0.5 interface/schema draft
 
 ## Validated baselines
@@ -31,34 +31,60 @@ Validated behavior includes:
 - approximate arithmetic remaining approximate;
 - result writeback/cleanup harness behavior.
 
-The provider-failure injection criterion was intentionally not exercised by that normal continuity gate and remains a later degradation-test item.
+That normal continuity gate intentionally did not inject a provider failure.
 
-## v0.7 current milestone
+### v0.7 — Shopping -> canonical state -> fresh Cooking
 
-The next architecture claim is cross-domain continuity:
+The repaired-harness integration gate passed at commit `375a8f61a40409e93c757d6c6f93117e4c31cb86` and is recorded in GitHub Issue #3.
 
-> Shopping and Cooking can cooperate through canonical KitchenState rather than shared chat history or provider-specific coupling.
+Validated behavior includes:
 
-The minimal path is:
+- Shopping choosing a 500 g package for about 350 g planned use without fabricating price/freshness facts;
+- purchase confirmation becoming canonical inventory without duplicate data entry;
+- compact append-only `purchase_inventory` Event;
+- Shopping ActiveTask cleared before handoff;
+- genuinely fresh Cooking session receiving no Shopping transcript/state summary;
+- Cooking retrieving purchased beef from bounded STATE rather than Event history;
+- new Cooking ActiveTask using the shared canonical state;
+- exact 500 g minus approximately 120 g becoming `Amount.mode=approximate` around 380 g;
+- no Shopping-specific provider table and no provider API dependency in DomainModules;
+- evaluator evidence escrow preserving fresh-session isolation while still making Session A behavior auditable;
+- PASS result writeback followed by verified temporary-store cleanup.
 
-`Shopping quantity need`
--> `package choice`
--> `purchase confirmation`
--> `KitchenState inventory + purchase Event`
--> `Shopping ActiveTask cleared`
--> fresh `Cooking` request
--> bounded inventory retrieval from STATE
--> new Cooking ActiveTask.
+This proves Shopping and Cooking can cooperate through canonical KitchenState rather than shared chat history or provider-specific coupling.
 
-## New Shopping slice
+## Current reliability gate — provider degradation / failure injection
 
-- `modules/shopping/contract.md`
-- `modules/shopping/logic.md`
-- `dist/KITCHEN_SKILL_WEB_GOOGLE_DRIVE_SHOPPING_COOKING.md`
+The next task is to exercise failure behavior already documented by the durable Web runtime, PersistenceCoordinator, and HealthEngine. This is a reliability test, not a new domain feature.
 
-Shopping uses the existing canonical contracts. It emits `ChangeSet` directly and never calls Google Drive/Sheets.
+Relevant existing contracts already say that provider failure must:
 
-No new provider table was added. The same Google Drive store remains:
+- keep safe live guidance moving using session working state when possible;
+- avoid claiming persistent recovery/read success when a read failed;
+- avoid claiming durable save when a write failed;
+- retain failed semantic changes as session-pending state;
+- preserve valid-store revision integrity on failed commit;
+- retry/rebase the pending semantic change after provider recovery;
+- keep provider error mechanics outside Cooking/Shopping logic.
+
+The degradation suite uses one dedicated conversation and two isolated test Sheets:
+
+1. one valid Kitchen test store;
+2. one sacrificial Sheet deleted immediately so its dead ID can deterministically force real provider read/write failures without corrupting the valid store.
+
+Test artifacts:
+
+- `tests/degradation/manifest.yaml`
+- `tests/degradation/01_provider_failure_and_recovery.md`
+- `tests/degradation/expectations/01_provider_failure_and_recovery.md`
+- `tests/degradation/README.md`
+- `demo/DEGRADATION_FAILURE_INJECTION_PROMPT.md`
+
+The fault injection happens outside DomainModules and must not enter canonical Kitchen data.
+
+## Provider/store shape remains unchanged
+
+No new physical storage schema has been added. Google Drive still uses exactly:
 
 - `META`
 - `STATE`
@@ -66,60 +92,22 @@ No new provider table was added. The same Google Drive store remains:
 - `EXPERIENCES`
 - `EVENTS`
 
-Confirmed purchases update `STATE.inventory`; compact purchase history is appended to `EVENTS`.
+Do not add a degradation table, retry table, vector database, or another provider just to satisfy the reliability test.
 
-## Cross-domain write/read path
+## Next after reliability gate
 
-Write:
+If degradation/failure injection passes, proceed to durable Event/Experience compaction and long-history validation:
 
-`Shopping -> ChangeSet -> PersistenceCoordinator -> GoogleDriveProvider`
+- increase cold Event history substantially;
+- keep normal ContextPack bounded;
+- derive/retrieve only compact reusable Experience evidence;
+- verify history growth does not cause proportional model-context growth.
 
-Read in a fresh Cooking conversation:
-
-`TaskRequest -> bounded Retriever -> KitchenState inventory -> Cooking`
-
-The purchase Event is not required for normal Cooking continuity.
-
-## Precision test
-
-The v0.7 gate deliberately spans modules:
-
-- Shopping records a labelled 500 g beef package;
-- fresh Cooking later receives the direct observation `大概用了120g`;
-- PersistenceCoordinator must produce approximately 380 g remaining, not exact 380 g.
-
-This proves new evidence may support precision while later uncertain arithmetic correctly degrades it.
-
-## v0.7 integration harness
-
-- `tests/shopping/manifest.yaml`
-- `tests/shopping/01_purchase_to_cooking_continuity.md`
-- `tests/shopping/expectations/01_purchase_to_cooking_continuity.md`
-- `demo/SHOPPING_SESSION_A_PROMPT.md`
-- `demo/SHOPPING_SESSION_B_PROMPT.md`
-
-Tracking gate: GitHub Issue #3.
-
-The harness uses a real temporary Google Sheet and two genuinely separate conversations. Session B receives only `TEST_COMMIT` and `TEST_STORE_URL`; it must not receive Shopping transcript/state/Event content.
-
-## Persistence/provider notes
-
-The v0.7 Shopping slice does not expand the Drive physical schema. `providers/google_drive.md`, the canonical v0.5 architecture draft, and the existing provider-neutral contracts remain authoritative.
-
-PersistenceCoordinator now documents Shopping purchase commit semantics, but there is still one semantic write gate.
-
-## Next after v0.7 gate
-
-If the real Shopping -> fresh Cooking gate passes:
-
-1. add a focused provider-degradation/failure-injection suite covering the v0.6 `NOT_EXERCISED` durability-failure behavior;
-2. then proceed to durable Event/Experience compaction/long-history validation before widening provider support.
-
-Do not expand Drive schema, add a vector database, or implement another provider merely because Shopping exists.
+Only after that should provider breadth (Notion, Tencent Docs, Codex/local storage, etc.) become a major implementation target.
 
 ## Architecture docs
 
 - `docs/Kitchen_System_v0.4_Frozen_Architecture.md` — untouched rollback baseline.
 - `docs/Kitchen_System_v0.5_Interface_and_Schema_Draft.md` — current formal interface/schema architecture.
 
-The v0.7 label is an implementation milestone, not a replacement architecture document.
+The v0.7 label remains an implementation milestone, not a replacement architecture document.
