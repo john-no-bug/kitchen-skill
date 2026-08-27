@@ -1,0 +1,43 @@
+version: 1
+contract: persisted_active_task_shape
+source_contract: schemas/active_task.yaml
+
+required_top_level:
+  - meta
+  - type
+  - status
+  - goal
+  - state
+
+allowed_top_level:
+  - meta
+  - type
+  - status
+  - goal
+  - phase
+  - state
+  - completed
+  - next
+  - open_issues
+  - related_recipe
+  - started_at
+  - updated_at
+
+required_meta_fields:
+  - id
+  - revision
+
+forbidden_module_specific_top_level:
+  - ingredient_states
+  - equipment_state
+  - completed_milestones
+  - next_actions
+  - pan_state
+  - inventory_refs
+
+rules:
+  - all module-specific operational facts belong under state
+  - completed and next contain task-step state only, never module state maps
+  - provider projection columns are separate from canonical payload_json
+  - every persisted Cooking ActiveTask must pass this shape check before provider commit
+  - a shape failure is harness_defect during the release gate and must not be physically committed
