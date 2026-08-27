@@ -1,11 +1,12 @@
 # Kitchen System v0.8 — Validated Baseline Addendum
 
-**Status:** evidence-backed addendum; does not replace frozen v0.4 or formal v0.5 interface/schema draft  
-**Product-bearing baseline:** `a0a8979e412ab254eb9095b9d5ccf21747bc8c63`
+**Status:** evidence-backed validated release addendum; does not replace frozen v0.4 or formal v0.5 interface/schema draft  
+**Product-bearing baseline:** `a0a8979e412ab254eb9095b9d5ccf21747bc8c63`  
+**v0.8.1 composite tested commit:** `d3c1fac7ea4de7e3d83dd198ce9799d82ed7c81b`
 
 ## 1. Purpose
 
-This document records which architectural claims have been exercised by real regression/integration gates through v0.8.
+This document records which architectural claims have been exercised by real regression/integration gates through the v0.8.1 validated release baseline.
 
 It is not a new architecture rewrite. If this document conflicts with the frozen v0.4 architecture or the v0.5 interface/schema draft, treat the older formal documents as the contract and treat the conflict as a defect to resolve explicitly.
 
@@ -52,12 +53,14 @@ Canonical schema support for Inventory, Planning, Recipe, and Equipment is not e
 Validated:
 
 - semantic write gate before provider commit.
+- persisted ActiveTask canonical shape: module-specific operational facts under `state`, task-step lists under canonical `completed` / `next`.
 - current observation precedence.
 - unknown preservation.
 - precision degradation (`500 g exact - ~120 g` becomes approximately 380 g).
 - revision-aware durable writes.
 - failed durable write does not produce durable success.
 - failed semantic change can remain session-pending and retry after provider recovery.
+- failed provider write does not advance valid-store revision or partially mutate valid state.
 - Experience compaction merge preserves stable id/key, deduplicates evidence, caps representative evidence refs, and does not mutate supporting Events.
 
 ### HealthEngine
@@ -87,8 +90,10 @@ Validated for:
 
 - sparse operational Cooking state.
 - sparse Shopping state.
+- canonical persisted top-level shape.
 - task clear before cross-domain handoff.
 - fresh-session continuation.
+- provider-failure pending/retry continuity.
 - no proportional transcript growth.
 
 ### Experience
@@ -118,6 +123,7 @@ Validated for:
 - global revision continuity.
 - active_task_id continuity.
 - degraded health signalling.
+- failed-write revision integrity.
 - last_compaction_at advancing only after successful compaction commit.
 
 ### Recipe
@@ -160,19 +166,40 @@ A historical gate may be inherited by a later release candidate only when the re
 
 This prevents documentation-only release commits from forcing unnecessary full reruns while preventing silent product changes from borrowing stale validation evidence.
 
-## 6. Release-hardening rule
+## 6. v0.8.1 release validation
 
-Milestone gates prove individual boundaries. A release baseline additionally requires:
+GitHub Issue #7 completed the current-HEAD composite release proof at tested commit:
+
+`d3c1fac7ea4de7e3d83dd198ce9799d82ed7c81b`
+
+Durable evidence:
+
+- Session A frozen evidence comment: `5440989161`.
+- Session B frozen PASS result comment: `5441221465`.
+- PASS cleanup receipt: `5441226472`.
+- Static-validation run for the tested commit: `33083694868` — success.
+
+The successful composite gate validated Shopping purchase → fresh Cooking STATE retrieval → approximate inventory consumption → canonical Cooking ActiveTask persistence → real provider failed write → session-pending retention → bounded retry/rebase → exactly one revision advance on recovery.
+
+All applicable evaluator criteria passed, including the explicit candidate-visible ActiveTask shape contract and evaluator audit that provider acceptance alone is not sufficient proof of semantic validity.
+
+Release-freeze commits after the tested commit are metadata/docs/CI-only and may inherit the composite product proof only while static validation confirms that guarded product blobs remain unchanged.
+
+See `docs/RELEASE_v0.8.1.md` for the release record.
+
+## 7. Release-hardening rule
+
+Milestone gates prove individual boundaries. A validated release baseline additionally requires:
 
 1. synchronized README / deployment / validation metadata;
 2. deterministic static repository validation;
 3. current-HEAD composite regression for boundaries touched by later shared infrastructure changes;
 4. durable result reporting and cleanup evidence;
-5. a release/tag only after the current release issue is completed.
+5. exact inheritance guards for unchanged product behavior.
 
-The v0.8.1 release gate is tracked in GitHub Issue #7.
+The v0.8.1 release baseline satisfies these conditions. Product-bearing changes after this baseline invalidate the affected inherited evidence according to `tests/VALIDATION_REGISTRY.yaml`.
 
-## 7. Explicitly unvalidated boundaries
+## 8. Explicitly unvalidated boundaries
 
 Do not claim the following merely because the canonical architecture permits them:
 
