@@ -7,7 +7,7 @@ Before this prompt is executed, the user must provide exactly:
 - `TEST_COMMIT: <40-char SHA>`
 - `TEST_STORE_URL: <exact temporary Google Sheet URL>`
 
-Do not request or accept Session A transcript, inventory/state summary, purchase Event, ActiveTask JSON, or evaluator notes. If such state content is provided, mark the run invalid with `harness_defect`.
+Do not request or accept Session A transcript, inventory/state summary, purchase Event, ActiveTask JSON, evaluator notes, or Session A evidence comment contents from the user. If such state content is provided in the handoff, mark the run invalid with `harness_defect`.
 
 ## Repository pinning
 
@@ -29,6 +29,8 @@ Read pinned:
 
 Do **not** read `tests/shopping/expectations/*` until B1 and B2 responses are frozen.
 
+Critically, do **not** read Issue #3 comments before B1/B2 are frozen. Session A writes an evaluator-only frozen evidence comment there, and reading it during candidate generation would invalidate fresh-session isolation.
+
 ## Store isolation and bootstrap
 
 Use exactly `TEST_STORE_URL`. Do not search for/switch to another store.
@@ -49,7 +51,7 @@ Process B1 and B2 exact user messages sequentially.
 
 ### B1
 
-Generate the Cooking response from the current B1 observation plus bounded persisted state. Do not retrieve purchase EVENTS for normal candidate generation. Persist a new Cooking ActiveTask when meaningful through PersistenceCoordinator/provider before B2.
+Generate the Cooking response from the current B1 observation plus bounded persisted state. Do not retrieve purchase EVENTS or Issue #3 evidence for normal candidate generation. Persist a new Cooking ActiveTask when meaningful through PersistenceCoordinator/provider before B2.
 
 ### B2
 
@@ -59,15 +61,20 @@ Produce current Live Cooking guidance. Persist B2 changes before evaluation.
 
 Do not rewrite B1 after seeing B2.
 
-## Freeze and evaluate
+## Freeze and evaluator-only evidence phase
 
-After B2 provider write:
+After the B2 provider write:
 
 1. freeze B1/B2 user-facing responses;
 2. record actual provider reads/writes;
 3. only now read `tests/shopping/expectations/01_purchase_to_cooking_continuity.md` pinned to TEST_COMMIT;
-4. evaluate all criteria against frozen responses and bounded store evidence;
-5. do not regenerate candidate responses to improve score.
+4. only now fetch Issue #3 comments and locate exactly one `Session A frozen evidence` comment matching both TEST_COMMIT and TEST_STORE_URL;
+5. if the matching Session A evidence comment is missing or ambiguous, overall result is `FAIL`, class `harness_defect`, and the store must be retained;
+6. evaluate Session A criteria from the frozen Session A evidence comment plus bounded durable store evidence;
+7. evaluate Session B criteria from frozen B1/B2 responses plus bounded durable store evidence;
+8. do not regenerate any candidate response to improve the score.
+
+The Session A evidence comment is evaluator-only evidence. Its contents must never influence B1/B2 candidate generation.
 
 ## Durable test reporting — mandatory
 
@@ -84,6 +91,8 @@ The comment must include:
 - failure class for every failure;
 - frozen B1/B2 responses;
 - candidate-phase bounded reads;
+- the Session A evidence comment URL/ID used during evaluator phase;
+- explicit confirmation that the Session A evidence comment and evaluator expectations were not read before B1/B2 freeze;
 - A2 purchase write evidence, including canonical `Amount.mode`;
 - B1/B2 durable write evidence;
 - proof Shopping task was cleared before Session B;

@@ -1,4 +1,4 @@
-version: 1
+version: 2
 suite: shopping_to_cooking_cross_domain_gate
 status: integration_test
 
@@ -18,7 +18,9 @@ required_sessions:
 fresh_session_rule: >-
   Session B may receive only TEST_COMMIT, TEST_STORE_URL, and the Session B
   prompt. It must not receive Session A transcript, ActiveTask JSON, inventory
-  summary, purchase Event, or evaluator expectations.
+  summary, purchase Event, evaluator expectations, or Session A evidence comment
+  contents through the user handoff. Session B must also not read Issue #3
+  comments until B1/B2 candidate responses are frozen.
 
 phase_a:
   prompt: demo/SHOPPING_SESSION_A_PROMPT.md
@@ -26,22 +28,27 @@ phase_a:
     - pin one repository commit
     - create isolated temporary Google Sheets Kitchen store
     - run Shopping A1/A2 sequentially
+    - freeze A1 and A2 candidate responses
     - persist purchase to canonical STATE via PersistenceCoordinator
     - append compact purchase Event
     - clear Shopping ActiveTask before handoff
-    - return only TEST_COMMIT and TEST_STORE_URL
+    - record bounded A1 ActiveTask and A1/A2 provider/write-path evidence
+    - durably write a non-evaluative Session A frozen evidence comment to Issue #3
+    - return only TEST_COMMIT and TEST_STORE_URL to the user
 
 phase_b:
   prompt: demo/SHOPPING_SESSION_B_PROMPT.md
   responsibilities:
     - use exactly TEST_COMMIT and TEST_STORE_URL
     - start in a genuinely fresh conversation
+    - do not read Issue #3 comments before B1/B2 freeze
     - bootstrap only tiny continuity state
     - route explicit request to Cooking
     - retrieve purchased beef from STATE without EVENTS/history
     - persist new Cooking ActiveTask
     - process approximate consumption and preserve precision semantics
     - freeze candidate responses before evaluator expectations
+    - after freeze, read the matching Session A evidence comment plus evaluator expectations
     - durably report evaluation to Issue #3 before cleanup
 
 pass_gate:
@@ -53,7 +60,9 @@ pass_gate:
     - canonical_inventory_write
     - compact_purchase_event
     - shopping_task_cleared
+    - session_a_frozen_evidence_escrow
     - fresh_session_no_transcript
+    - session_a_evidence_not_read_before_freeze
     - cooking_reads_state_not_event
     - new_cooking_task_created
     - cross_module_precision_semantics
@@ -76,8 +85,11 @@ failure_classes:
 artifacts:
   candidate_script: tests/shopping/01_purchase_to_cooking_continuity.md
   evaluator_expectations: tests/shopping/expectations/01_purchase_to_cooking_continuity.md
+  session_a_evidence_sink: github_issue_3_comment
 
 notes:
   - The v0.5 Pure Web suite and v0.6 persistence gate remain separate baselines.
   - No new Shopping-specific provider table is allowed for this test.
   - Event history must not be required for Session B candidate generation.
+  - Session A evidence escrow is test-only and must not enter canonical Kitchen data.
+  - Persisting Session A evidence to Issue #3 does not permit Session B to read it before candidate freeze.

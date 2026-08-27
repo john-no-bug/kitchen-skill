@@ -2,6 +2,8 @@
 
 Evaluator-only. Load only after Session A execution and all Session B candidate responses are frozen.
 
+Session A does not read this file. Session A instead writes a non-evaluative frozen evidence escrow comment to Issue #3 before handoff. Session B may read that evidence comment only after B1/B2 are frozen.
+
 ## Session A — Shopping
 
 1. A1 recommends the 500 g package by default because about 350 g is planned and 500 g covers it with less surplus/waste than 1 kg when price is explicitly excluded and no contrary storage/future-use evidence exists.
@@ -14,9 +16,11 @@ Evaluator-only. Load only after Session A execution and all Session B candidate 
 8. Shopping ActiveTask is completed/cleared after purchase and META has no current active task before Session B.
 9. No Shopping-specific storage tab/table is created.
 
+Criteria 1–7 must be judged from the matching frozen Session A evidence escrow comment plus bounded store readbacks. Do not infer unobserved A1/A2 user-facing behavior merely from the final store.
+
 ## Session B — Fresh Cooking
 
-10. Session B receives no Session A transcript/state summary/purchase Event and does not request a recap.
+10. Session B receives no Session A transcript/state summary/purchase Event/evidence contents through the user handoff and does not request a recap.
 11. Bootstrap reads only META plus current ActiveTask if one exists; because Shopping was cleared, no Shopping task should be revived.
 12. The explicit B1 cooking request routes to Cooking.
 13. B1 retrieves the beef inventory from STATE using bounded task-specific lookup; the purchase Event is not required or loaded for candidate generation.
@@ -30,12 +34,14 @@ Evaluator-only. Load only after Session A execution and all Session B candidate 
 21. Normal candidate retrieval remains bounded and does not load full EVENTS/history/whole spreadsheet.
 22. Unknown fields not established by the run remain unknown rather than fabricated.
 
-## Harness completion
+## Evidence isolation and harness completion
 
-23. Before cleanup, the frozen evaluation result is written to `john-no-bug/kitchen-skill` Issue #3 and includes TEST_COMMIT, TEST_STORE_URL, criteria, failure classes, bounded-read/write evidence, and latest relevant revisions.
-24. PASS path deletes the temporary test Sheet after result writeback, verifies it unavailable, records cleanup receipt, and closes Issue #3 completed.
-25. FAIL path retains the test store for debugging and leaves Issue #3 open.
-26. Failure to durably report the result to Issue #3 is `harness_defect` and forces overall FAIL.
+23. Before user handoff, Session A durably writes exactly one matching frozen evidence escrow comment to Issue #3. It includes TEST_COMMIT, TEST_STORE_URL, frozen A1/A2 responses, bounded A1 Shopping ActiveTask readback, A1/A2 provider read/write trace, A2 ChangeSet/PersistenceCoordinator/provider-path evidence, canonical purchase/Event/task-clear readbacks, and `EVALUATOR_EXPECTATIONS_READ: false`. It contains no evaluator scores or expectations.
+24. Session B does not read the Session A evidence escrow comment or evaluator expectations before B1/B2 are frozen. After freeze, it reads exactly the matching evidence comment for TEST_COMMIT + TEST_STORE_URL and uses it only for evaluation.
+25. Before cleanup, the frozen final evaluation result is written to `john-no-bug/kitchen-skill` Issue #3 and includes TEST_COMMIT, TEST_STORE_URL, criteria, failure classes, bounded-read/write evidence, the Session A evidence comment ID/URL, evidence-isolation confirmation, and latest relevant revisions.
+26. PASS path deletes the temporary test Sheet after result writeback, verifies it unavailable, records cleanup receipt, and closes Issue #3 completed.
+27. FAIL path retains the test store for debugging and leaves Issue #3 open.
+28. Missing/ambiguous Session A evidence escrow, pre-freeze reading of that evidence, or failure to durably report the final result to Issue #3 is `harness_defect` and forces overall FAIL.
 
 ## Pass decision
 
