@@ -1,4 +1,4 @@
-version: 1
+version: 2
 suite: current_head_release_composite_regression
 status: release_gate
 repository: john-no-bug/kitchen-skill
@@ -6,11 +6,13 @@ tracking_issue: 7
 candidate_bundle: dist/KITCHEN_SKILL_WEB_GOOGLE_DRIVE_SHOPPING_COOKING_V08.md
 validation_registry: tests/VALIDATION_REGISTRY.yaml
 deployments: dist/deployments.yaml
+active_task_shape: tests/release/active_task_shape.yaml
 
 purpose: >-
   Validate the current release-candidate HEAD across fresh-session persistence,
   Shopping-to-Cooking canonical handoff, precision semantics, real failed-write
-  pending state, bounded recovery retry, and release evidence inheritance.
+  pending state, bounded recovery retry, canonical ActiveTask shaping, and
+  release evidence inheritance.
 
 required_sessions:
   - release_session_a_shopping
@@ -39,12 +41,16 @@ phase_b:
     - start genuinely fresh
     - use exactly the three handoff values
     - keep Issue #7 comments and evaluator expectations unread before B1-B4 freeze
+    - load candidate-visible canonical ActiveTask shape contract before B1
+    - validate every B1-B4 ActiveTask semantic payload before physical provider commit
+    - keep module-specific task facts under canonical state
     - retrieve purchased beef from STATE with zero candidate Event reads
     - persist approximate 120 g consumption as approximate remaining amount
-    - freeze B3 newest observation and semantic change before real dead-target write
+    - freeze B3 newest observation and canonical semantic change before real dead-target write
     - prove failed write does not advance valid-store revision or partially mutate state
-    - retain B3 change session-pending
+    - retain canonical B3 change session-pending
     - restore valid target and bounded-retry pending change
+    - verify recovered durable ActiveTask remains canonical
     - freeze B4 continuation from recovered newest state
     - evaluate inherited blob guards and current-head composite criteria after freeze
     - report frozen result to Issue #7 before cleanup
@@ -62,14 +68,18 @@ pass_gate:
   criteria:
     - validation_registry_guards_match
     - static_validation_pass
+    - release_active_task_shape_contract_valid
     - session_a_shopping_quantity_fit
     - purchase_capture_without_duplicate_entry
     - canonical_exact_inventory_write
     - shopping_task_cleared
     - fresh_session_no_transcript
     - cooking_reads_state_not_event
+    - canonical_cooking_active_task_persisted
     - approximate_consumption_preserves_uncertainty
+    - canonical_b2_atomic_semantic_write
     - newest_observation_controls_failed_write_turn
+    - canonical_pending_change_before_fault_injection
     - real_provider_write_failure
     - no_false_durable_success
     - failed_change_retained_session_pending
@@ -77,6 +87,7 @@ pass_gate:
     - no_partial_failed_state
     - bounded_retry_refresh
     - pending_retry_uses_normal_persistence_path
+    - canonical_recovered_active_task
     - retry_advances_revision_once
     - recovered_state_matches_newest_observation
     - bounded_retrieval_no_event_leakage
@@ -105,6 +116,7 @@ failure_classes:
 artifacts:
   candidate_script: tests/release/01_current_head_composite_regression.md
   evaluator_expectations: tests/release/expectations/01_current_head_composite_regression.md
+  canonical_active_task_shape: tests/release/active_task_shape.yaml
 
 cleanup:
   pass:
