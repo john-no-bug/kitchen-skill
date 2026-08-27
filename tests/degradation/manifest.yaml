@@ -1,0 +1,58 @@
+version: 1
+suite: web_google_drive_degradation_gate
+status: integration_test
+
+purpose: >-
+  Validate the existing durable-Web degradation contract under deterministic
+  provider read/write failure without changing Cooking/Shopping domain logic.
+
+repository: john-no-bug/kitchen-skill
+candidate_bundle: dist/KITCHEN_SKILL_WEB_GOOGLE_DRIVE_SHOPPING_COOKING.md
+tracking_issue: 5
+
+required_sessions:
+  - one_failure_injection_session
+
+scenarios:
+  - read_failure_session_fallback
+  - write_failure_pending_retry
+
+pass_gate:
+  all_required: true
+  criteria:
+    - baseline_durable_task_established
+    - read_failure_does_not_block_safe_guidance
+    - read_failure_does_not_claim_persistent_recovery
+    - storage_degraded_signal_emitted
+    - write_failure_does_not_block_safe_guidance
+    - write_failure_does_not_claim_durable_success
+    - failed_change_retained_session_pending
+    - failed_write_does_not_advance_store_revision
+    - retry_after_provider_recovery_commits_pending_change
+    - recovered_store_matches_newest_observation
+    - bounded_reads_during_failure_and_recovery
+    - domain_provider_separation_preserved
+    - durable_issue_report
+    - cleanup_completed
+
+failure_classes:
+  - degraded_read_handling
+  - degraded_write_handling
+  - false_durability_claim
+  - pending_change_loss
+  - retry_recovery
+  - revision_integrity
+  - cooking_regression
+  - instruction_leak
+  - harness_defect
+
+artifacts:
+  candidate_script: tests/degradation/01_provider_failure_and_recovery.md
+  evaluator_expectations: tests/degradation/expectations/01_provider_failure_and_recovery.md
+  runner_prompt: demo/DEGRADATION_FAILURE_INJECTION_PROMPT.md
+
+notes:
+  - The failure injection is test-harness behavior, not production provider logic.
+  - Do not modify Cooking/Shopping/provider contracts merely to make the test pass.
+  - Failure injection must happen only after the relevant candidate response/semantic change is determined, so the fault cannot coach the domain answer.
+  - Evaluator expectations must remain unread until all candidate responses are frozen.
