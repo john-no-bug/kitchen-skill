@@ -1,0 +1,117 @@
+version: 1
+suite: notion_plugin_capability_probe
+tracking_issue: 9
+purpose: >-
+  Measure the actual Notion primitives exposed independently by the user's Web
+  and Codex plugin/app versions before designing a Notion StorageProvider or
+  any cross-runtime synchronization protocol.
+
+surfaces:
+  - web
+  - codex
+
+probe_rule: >-
+  Test the selected installed Notion integration itself. Do not infer support
+  from documentation, plugin name, public Notion API knowledge, browser access,
+  local files, direct HTTP calls, or another integration.
+
+scratch_collection:
+  preferred_title_prefix: "Kitchen Skill Notion Capability Probe"
+  minimum_properties:
+    Name: title
+    ks_key: text
+    collection: text_or_select
+    revision: number
+    payload_json: text
+  optional_properties:
+    lookup_keys: text
+    status: text_or_select
+
+scratch_records:
+  meta:
+    ks_key: meta/global
+    collection: meta
+    revision: 1
+    payload_json: '{"store_format":"kitchen-skill-notion-probe-v1","global_revision":1}'
+  state_initial:
+    ks_key: inventory/ground_beef
+    collection: state
+    revision: 1
+    payload_json: '{"id":"ground_beef","amount":{"mode":"exact","value":500,"unit":"g"}}'
+  state_updated:
+    ks_key: inventory/ground_beef
+    collection: state
+    revision: 2
+    payload_json: '{"id":"ground_beef","amount":{"mode":"approximate","value":380,"unit":"g"}}'
+  event_append:
+    ks_key: event/probe-1
+    collection: events
+    revision: 1
+    payload_json: '{"type":"probe_event","entity":"ground_beef"}'
+
+capabilities:
+  p0_required:
+    durable_read:
+      test: retrieve one created record/page from remote Notion
+    durable_write:
+      test: create one record and read it back
+    stable_identity:
+      test: creation returns a stable page/object id and update preserves it
+    partial_update:
+      test: update revision and payload_json on the state row without recreating it
+    append:
+      test: create a second independent Event-style row without mutating the state row
+    structured_query:
+      test: exact filter ks_key=inventory/ground_beef with finite limit returns the intended row
+    bounded_query:
+      test: query accepts or demonstrably enforces a finite result limit/page size
+    shared_remote:
+      test: created/updated object is real Notion workspace content, not local/cache-only data
+    revision_observability:
+      test: expose revision property and stable id; last_edited_time/version metadata if available
+  p1_preferred:
+    bootstrap_collection_create:
+      test: create scratch structured collection/database/data source
+    schema_inspection:
+      test: inspect property names/types after creation
+    exact_resolution:
+      test: find/retrieve the scratch collection by exact URL/id or unambiguous title
+    sort_pagination:
+      test: sort and pagination/page-size controls if exposed
+    cleanup:
+      test: archive/trash/delete scratch content so it no longer appears in normal active queries
+  p2_optional:
+    text_search: true
+    bulk_or_batch_write: true
+    conditional_write: true
+    transactional_write: true
+
+classification:
+  p0_pass: all p0_required capabilities proven by real actions
+  template_bootstrap_required: >-
+    p0 passes against a writable pre-existing structured collection but the plugin
+    cannot create/configure the collection itself.
+  unusable_as_kitchen_provider: any p0_required capability is unsupported
+
+report_fields:
+  - surface
+  - integration_display_name
+  - visible_version_or_manifest_identity
+  - connection_auth_result
+  - action_names_or_operation_descriptions
+  - p0_matrix
+  - p1_matrix
+  - p2_matrix
+  - created_collection_id
+  - created_record_ids
+  - stable_id_preserved_on_update
+  - last_edited_or_version_metadata
+  - exact_errors
+  - cleanup_result
+  - overall_classification
+
+safety:
+  - use scratch Notion content only
+  - never store OAuth tokens, workspace secrets, or account credentials in evidence
+  - do not modify production Kitchen data
+  - cleanup only objects created by this probe
