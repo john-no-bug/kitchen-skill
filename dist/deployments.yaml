@@ -1,11 +1,23 @@
-version: 1
+version: 2
+
+bootstrap:
+  status: active_public_loader
+  entrypoint: SKILL.md
+  rendered_url: https://github.com/john-no-bug/kitchen-skill/blob/main/SKILL.md
+  raw_url: https://raw.githubusercontent.com/john-no-bug/kitchen-skill/main/SKILL.md
+  selection_manifest: dist/deployments.yaml
+  connector_required: false
+  transport_priority:
+    - public_web_http
+    - installed_skill_or_app
+    - user_supplied_copy
 
 deployments:
   pure_web:
     status: validated_fallback
     runtime: WEB_CHAT
     storage: CONTEXT_ONLY
-    entrypoint: SKILL.md
+    entrypoint: dist/KITCHEN_SKILL_WEB_LIVE_COOKING.md
     distribution: dist/KITCHEN_SKILL_WEB_LIVE_COOKING.md
     validation_gate: 1
     validated_blob: 37a8d15bb376579a9a33ede514b121dff04c249d
@@ -43,7 +55,10 @@ historical_bundles:
     milestone: v0.7
 
 rules:
-  - Root SKILL.md is the validated Pure Web fallback and is not silently replaced by a durable-provider bundle.
+  - Root SKILL.md is a public capability bootstrap, not a product bundle.
+  - Normal users must not need a GitHub connector to load public Kitchen Skill instructions.
+  - The validated Pure Web artifact is dist/KITCHEN_SKILL_WEB_LIVE_COOKING.md and retains its validated blob identity independently of the bootstrap.
   - web_google_drive_v08 is the validated durable Web deployment only while Issue #7 release evidence and validation-registry blob guards remain valid.
   - Product-bearing changes to guarded files require the relevant validation gate to be rerun before retaining validated_release status.
+  - Experimental Notion capability probes are not deployment identities.
   - Historical bundles remain available for rollback/debugging and are not the latest durable deployment identity.

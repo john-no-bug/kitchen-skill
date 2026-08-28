@@ -107,11 +107,25 @@ def check_validation_registry() -> None:
                     f"expected {expected}, got {actual}"
                 )
 
+    distribution = registry.get("distribution", {}).get("public_bootstrap", {})
+    if distribution.get("entrypoint") != "SKILL.md":
+        fail("distribution.public_bootstrap.entrypoint must be SKILL.md")
+    if distribution.get("manifest") != "dist/deployments.yaml":
+        fail("distribution.public_bootstrap.manifest must be dist/deployments.yaml")
+    if distribution.get("connector_required") is not False:
+        fail("Public bootstrap must not require a GitHub connector")
+
     release = registry.get("release_candidate", {})
     if release.get("tracking_issue") != 7:
-        fail("release_candidate.tracking_issue must be 7 during v0.8.1 hardening")
-    if release.get("status") not in {"pending_composite_gate", "validated_release"}:
-        fail("release_candidate.status must be pending_composite_gate or validated_release")
+        fail("release_candidate.tracking_issue must remain 7 for v0.8.1 validated release")
+    if release.get("status") != "validated_release":
+        fail("release_candidate.status must remain validated_release")
+
+    notion_probe = registry.get("active_probes", {}).get("notion_plugin_conformance", {})
+    if notion_probe.get("issue") != 9:
+        fail("Notion plugin conformance probe must track Issue #9")
+    if notion_probe.get("connector_required") is not False:
+        fail("Notion capability probe must not require GitHub connector access")
 
 
 def check_deployments() -> None:
@@ -119,10 +133,22 @@ def check_deployments() -> None:
     data = load_yaml(path)
     if not isinstance(data, dict):
         return
+
+    bootstrap = data.get("bootstrap", {})
+    if bootstrap.get("entrypoint") != "SKILL.md":
+        fail("Deployment bootstrap entrypoint must be SKILL.md")
+    if bootstrap.get("selection_manifest") != "dist/deployments.yaml":
+        fail("Bootstrap must select deployments through dist/deployments.yaml")
+    if bootstrap.get("connector_required") is not False:
+        fail("Deployment bootstrap must not require GitHub connector access")
+    expected_raw = "https://raw.githubusercontent.com/john-no-bug/kitchen-skill/main/SKILL.md"
+    if bootstrap.get("raw_url") != expected_raw:
+        fail("Deployment bootstrap raw_url drifted")
+
     deployments = data.get("deployments", {})
     required = {"pure_web", "web_google_drive_v08"}
     if set(deployments) != required:
-        fail(f"Deployment identities must be exactly {sorted(required)}")
+        fail(f"Validated deployment identities must be exactly {sorted(required)}")
     for deployment in deployments.values():
         for key in ("entrypoint", "distribution"):
             value = deployment.get(key)
@@ -130,23 +156,38 @@ def check_deployments() -> None:
                 require_path(value, path)
 
     pure = deployments.get("pure_web", {})
-    if pure.get("entrypoint") != "SKILL.md":
-        fail("pure_web entrypoint must remain SKILL.md")
+    pure_path = "dist/KITCHEN_SKILL_WEB_LIVE_COOKING.md"
+    if pure.get("entrypoint") != pure_path or pure.get("distribution") != pure_path:
+        fail("pure_web must point directly to the validated Pure Web dist artifact")
 
     durable = deployments.get("web_google_drive_v08", {})
     if durable.get("entrypoint") != "dist/KITCHEN_SKILL_WEB_GOOGLE_DRIVE_SHOPPING_COOKING_V08.md":
-        fail("web_google_drive_v08 must point to the v0.8 bundle")
+        fail("web_google_drive_v08 must point to the v0.8 durable bundle")
 
 
-def check_pure_web_identity() -> None:
-    root_skill = ROOT / "SKILL.md"
+def check_public_bootstrap() -> None:
+    path = ROOT / "SKILL.md"
+    text = path.read_text(encoding="utf-8")
+    if len(text.encode("utf-8")) > 12000:
+        fail("Public SKILL.md bootstrap grew too large; product logic belongs in dist bundles")
+    required_markers = [
+        "Public Web Bootstrap",
+        "https://raw.githubusercontent.com/john-no-bug/kitchen-skill/main/dist/deployments.yaml",
+        "A GitHub connector is not required for normal use",
+        "user-pasted or user-uploaded copy",
+        "dist/KITCHEN_SKILL_WEB_LIVE_COOKING.md",
+    ]
+    for marker in required_markers:
+        if marker not in text:
+            fail(f"Public bootstrap missing required marker: {marker}")
+
+
+def check_pure_web_artifact_identity() -> None:
     dist_skill = ROOT / "dist" / "KITCHEN_SKILL_WEB_LIVE_COOKING.md"
-    if root_skill.read_bytes() != dist_skill.read_bytes():
-        fail("SKILL.md and Pure Web dist bundle are no longer identical")
     expected = "37a8d15bb376579a9a33ede514b121dff04c249d"
-    actual = git_blob_sha(root_skill)
+    actual = git_blob_sha(dist_skill)
     if actual != expected:
-        fail(f"Pure Web validated blob changed: expected {expected}, got {actual}")
+        fail(f"Pure Web validated artifact changed: expected {expected}, got {actual}")
 
 
 def check_google_drive_store() -> None:
@@ -160,7 +201,7 @@ def check_google_drive_store() -> None:
     if actual_tabs != expected_tabs:
         fail(f"Google Drive tabs changed without an explicit migration: {sorted(actual_tabs)}")
     if store.get("file", {}).get("schema_version") != "0.6-drive-slice-1":
-        fail("Google Drive schema_version changed; release hardening must not perform a schema migration")
+        fail("Google Drive schema_version changed; distribution work must not perform a schema migration")
     if store.get("file", {}).get("identity_marker", {}).get("store_format") != "kitchen-skill-google-sheets-v1":
         fail("Google Drive store_format changed")
 
@@ -237,42 +278,61 @@ def check_release_active_task_shape() -> None:
         fail("Release scenario must bind Session B to active_task_shape.yaml")
 
 
-def check_release_files() -> None:
+def check_notion_probe_public_loading() -> None:
+    raw_matrix = "https://raw.githubusercontent.com/john-no-bug/kitchen-skill/main/tests/notion/capability_matrix.yaml"
+    for rel in ("demo/NOTION_WEB_CAPABILITY_PROMPT.md", "demo/NOTION_CODEX_CAPABILITY_PROMPT.md"):
+        path = ROOT / rel
+        text = path.read_text(encoding="utf-8")
+        if raw_matrix not in text:
+            fail(f"Notion probe does not load public matrix URL: {rel}")
+        if "GitHub connector is **not required**" not in text:
+            fail(f"Notion probe still lacks explicit connector-free rule: {rel}")
+        if "Always return one complete report in the conversation" not in text:
+            fail(f"Notion probe must return report even without GitHub writeback: {rel}")
+
+
+def check_required_files() -> None:
     required = [
+        "SKILL.md",
         "docs/Kitchen_System_v0.8_Validated_Baseline.md",
+        "docs/RELEASE_v0.8.1.md",
         "tests/VALIDATION_REGISTRY.yaml",
         "dist/deployments.yaml",
         "tests/release/active_task_shape.yaml",
         "tests/release/manifest.yaml",
         "tests/release/01_current_head_composite_regression.md",
         "tests/release/expectations/01_current_head_composite_regression.md",
-        "demo/RELEASE_SESSION_A_PROMPT.md",
-        "demo/RELEASE_SESSION_B_PROMPT.md",
+        "tests/notion/capability_matrix.yaml",
+        "demo/NOTION_WEB_CAPABILITY_PROMPT.md",
+        "demo/NOTION_CODEX_CAPABILITY_PROMPT.md",
     ]
     for rel in required:
         if not (ROOT / rel).exists():
-            fail(f"Required release-hardening file missing: {rel}")
+            fail(f"Required repository file missing: {rel}")
 
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    stale_phrases = [
-        "This v0.8 real long-history gate has not yet been executed",
-        "must not be reported as passed",
+    required_readme_markers = [
+        "Start without installing a skill or connecting GitHub",
+        "Root `SKILL.md` is now intentionally a **small capability/distribution bootstrap**",
+        "Notion capability/conformance",
     ]
-    for phrase in stale_phrases:
-        if phrase in readme:
-            fail(f"README still contains stale validation status: {phrase}")
+    for marker in required_readme_markers:
+        if marker not in readme:
+            fail(f"README missing distribution/probe status marker: {marker}")
 
 
 def main() -> int:
     check_machine_yaml_files()
     check_validation_registry()
     check_deployments()
-    check_pure_web_identity()
+    check_public_bootstrap()
+    check_pure_web_artifact_identity()
     check_google_drive_store()
     check_domain_provider_separation()
     check_no_legacy_top_level_schema()
     check_release_active_task_shape()
-    check_release_files()
+    check_notion_probe_public_loading()
+    check_required_files()
 
     if ERRORS:
         print("STATIC VALIDATION: FAIL")
@@ -282,12 +342,13 @@ def main() -> int:
 
     print("STATIC VALIDATION: PASS")
     print("- machine YAML/manifest references parse and resolve")
-    print("- validation blob guards match tested baselines")
-    print("- Pure Web fallback identity preserved")
+    print("- validation blob guards match tested product baselines")
+    print("- public SKILL.md bootstrap is connector-free and bounded")
+    print("- validated Pure Web artifact identity preserved in dist")
     print("- Google Drive five-tab schema preserved")
     print("- Domain/provider separation preserved")
     print("- release ActiveTask harness shape is canonical")
-    print("- release-hardening assets present")
+    print("- Notion capability probes load public specs and return reports without GitHub write access")
     return 0
 
 

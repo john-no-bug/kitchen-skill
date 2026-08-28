@@ -4,12 +4,26 @@ Run this in the **Web Chat surface** where the Notion integration you actually i
 
 This is a capability test only. Do not use or modify production Kitchen data.
 
+## Public specification loading
+
+A GitHub connector is **not required**.
+
+Read the probe matrix using ordinary public web/HTTP access from:
+
+`https://raw.githubusercontent.com/john-no-bug/kitchen-skill/main/tests/notion/capability_matrix.yaml`
+
+Rendered fallback:
+
+`https://github.com/john-no-bug/kitchen-skill/blob/main/tests/notion/capability_matrix.yaml`
+
+If this runtime cannot read the public specification through ordinary web access, ask the user to paste/upload the matrix. Do not ask them to connect GitHub.
+
 ## Ground rules
 
-1. Read `tests/notion/capability_matrix.yaml` from `john-no-bug/kitchen-skill` at current `main`.
-2. Test only the selected Web Notion plugin/app and its actual exposed actions.
-3. Do not infer support from general Notion API knowledge or documentation.
-4. Do not use browser automation, direct HTTP/curl, local files, copied JSON, another Notion integration, or manual UI edits to make a missing plugin action look supported.
+1. Test only the selected Web Notion plugin/app and its actual exposed actions.
+2. Do not infer support from general Notion API knowledge or documentation.
+3. Do not use browser automation, direct HTTP/curl, local files, copied JSON, another Notion integration, or manual UI edits to make a missing plugin action look supported.
+4. Public GitHub reading is allowed only for loading the test specification; GitHub is not persistence evidence.
 5. Do not expose OAuth tokens, workspace secrets, account IDs, or credentials in the report.
 6. Scratch object/page IDs are acceptable evidence because the probe will clean them up.
 
@@ -43,21 +57,15 @@ Use the minimum logical properties from the matrix:
 
 Optional: `lookup_keys`, `status`.
 
-Record the returned database/data-source/page/container ID(s) and inspect/read back the property schema if possible.
+Record returned database/data-source/page/container IDs and inspect/read back the property schema if possible.
 
-If collection creation/schema configuration is not exposed, do **not** fabricate success. Record `bootstrap_collection_create=unsupported`.
-
-If the plugin can still perform P0 record CRUD/query against an already available scratch structured collection, it may continue using that only if the collection is explicitly a disposable probe target. Classify eventual success as `template_bootstrap_required`.
+If collection creation/schema configuration is not exposed, record `bootstrap_collection_create=unsupported`. Continue P0 only if an explicitly disposable, writable structured probe target is already available; classify success as `template_bootstrap_required`.
 
 If no safe writable structured target exists, stop after reporting the bootstrap gap.
 
 ## Step W2 — create and read META-style row
 
-Create the matrix `meta` row. Read it back through Notion and record:
-
-- stable page/object ID;
-- `ks_key`, `collection`, `revision`, `payload_json`;
-- `last_edited_time`, version, or equivalent metadata if exposed.
+Create the matrix `meta` row. Read it back through Notion and record stable page/object ID, logical properties, and last-edited/version metadata if exposed.
 
 ## Step W3 — create STATE-style row
 
@@ -71,33 +79,24 @@ Use a structured Notion query/filter—not free-text semantic search—to reques
 
 with a finite result limit/page size, preferably `1`.
 
-Record whether the action exposes:
-
-- exact property filter;
-- limit/page size;
-- sort/pagination controls;
-- returned stable record ID.
+Record exact property filter, limit/page-size, sort/pagination controls, and returned stable record ID.
 
 If only full-text/file search is available, `structured_query` is unsupported even if it happens to find the row.
 
 ## Step W5 — partial update, same ID
 
-Update the existing state row **in place** to the matrix `state_updated` representation:
+Update the existing STATE row **in place** to the matrix `state_updated` representation:
 
 - revision `1 -> 2`;
 - payload exact 500 g -> approximate 380 g.
 
-Do not create a replacement row.
-
-Read back the row and verify the Notion object/page ID is unchanged. Record updated last-edited/version metadata if exposed.
+Do not create a replacement row. Read back and verify the Notion object/page ID is unchanged. Record updated last-edited/version metadata if exposed.
 
 ## Step W6 — append Event-style row
 
-Create the matrix `event_append` row as a separate new record. Verify the state row still exists unchanged at revision 2.
+Create the matrix `event_append` row as a separate new record. Verify the STATE row still exists unchanged at revision 2.
 
-This proves append can coexist with current-state update.
-
-## Step W7 — search/resolution and optional controls
+## Step W7 — optional controls
 
 Attempt, when the selected plugin exposes them:
 
@@ -113,13 +112,13 @@ Unsupported P2 operations are not failures. Report them accurately.
 
 ## Step W8 — cleanup
 
-Archive/trash/delete only the scratch records/container created by this probe. Verify they are no longer returned by the normal active exact query/search path when the plugin allows verification.
+Archive/trash/delete only the scratch records/container created by this probe. Verify they are no longer returned by the normal active exact query/search path when possible.
 
-If cleanup action is missing, report `cleanup_gap` and leave the exact scratch object title/ID so the user can remove it manually later; do not delete unrelated content.
+If cleanup action is missing, report `cleanup_gap` and leave the exact scratch object title/ID for manual removal; do not delete unrelated content.
 
 ## Required report
 
-Produce one compact report with:
+Always return one complete report in the conversation:
 
 ```yaml
 surface: web
@@ -158,4 +157,4 @@ overall_classification: p0_pass|template_bootstrap_required|unusable_as_kitchen_
 
 Base every `supported` value on an actual successful Notion action in this run.
 
-If GitHub Issue #9 commenting is available, append this report there under heading `Web Notion capability result`; otherwise return it verbatim to the user for the development session.
+If GitHub Issue #9 commenting happens to be available in this development/test environment, it may additionally append the report there under `Web Notion capability result`. That writeback is optional and must never be required from normal users.

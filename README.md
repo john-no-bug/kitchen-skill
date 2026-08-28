@@ -1,13 +1,31 @@
-# Kitchen Skill — v0.8.1 Validated Release Baseline
+# Kitchen Skill — v0.8.1 Validated Release + Public Bootstrap
 
-Status: validated release baseline  
+Status: validated v0.8.1 product baseline; public-web bootstrap active; Notion Web/Codex capability probe in progress.
+
 Frozen architecture baseline: `docs/Kitchen_System_v0.4_Frozen_Architecture.md` + `docs/Kitchen_System_v0.5_Interface_and_Schema_Draft.md`
 
-## Project state
+## Start without installing a skill or connecting GitHub
+
+Normal users do **not** need a GitHub connector and do not need repository write access.
+
+Use this public bootstrap:
+
+- rendered: `https://github.com/john-no-bug/kitchen-skill/blob/main/SKILL.md`
+- raw: `https://raw.githubusercontent.com/john-no-bug/kitchen-skill/main/SKILL.md`
+
+A generic startup instruction is:
+
+> Read and follow the public Kitchen Skill bootstrap at https://raw.githubusercontent.com/john-no-bug/kitchen-skill/main/SKILL.md using ordinary web/HTTP access. Do not require a GitHub connector. Load only a validated deployment compatible with the capabilities available in this runtime.
+
+Root `SKILL.md` is now intentionally a **small capability/distribution bootstrap**, not a full product bundle. It reads `dist/deployments.yaml`, selects a validated deployment compatible with the current runtime/provider, then loads that public `dist/` artifact.
+
+If public web access is disabled by workspace policy, the final fallback is for the user to paste/upload the selected public bundle. GitHub connection is never required for runtime use.
+
+## Validated product state
 
 The product-bearing v0.8 baseline is commit `a0a8979e412ab254eb9095b9d5ccf21747bc8c63`.
 
-The current-HEAD composite release gate was tested at `d3c1fac7ea4de7e3d83dd198ce9799d82ed7c81b` and passed GitHub Issue #7. Release-freeze commits after that tested commit are metadata/docs/CI-only and inherit product evidence only while the validation-registry blob guards remain exact and static validation stays green.
+The current-HEAD composite release gate was tested at `d3c1fac7ea4de7e3d83dd198ce9799d82ed7c81b` and passed GitHub Issue #7. Release/distribution commits after that tested commit inherit product evidence only while validation-registry blob guards remain exact and static validation stays green.
 
 Validated gates:
 
@@ -20,23 +38,34 @@ Validated gates:
 
 Release evidence is recorded in `docs/RELEASE_v0.8.1.md` and `tests/VALIDATION_REGISTRY.yaml`.
 
-## What is implemented
+## Validated deployment artifacts
+
+Machine-readable deployment metadata lives in `dist/deployments.yaml`.
+
+Current validated artifacts:
+
+- Pure Web fallback: `dist/KITCHEN_SKILL_WEB_LIVE_COOKING.md`
+- Web + Google Drive: `dist/KITCHEN_SKILL_WEB_GOOGLE_DRIVE_SHOPPING_COOKING_V08.md`
+
+The Pure Web artifact retains validated Git blob `37a8d15bb376579a9a33ede514b121dff04c249d`. Root `SKILL.md` no longer has to equal that blob because it serves the public bootstrap role.
+
+## Implemented product modules
 
 ### Domain modules
 
 - Cooking
 - Shopping
 
-### Runtime modes
+### Runtime modes already validated
 
 - Web context-only / ephemeral
 - Web + durable provider
 
-### Durable provider
+### Durable provider already validated
 
 - Google Drive / native Google Sheets
 
-### Stable durable store
+### Stable durable Google Drive store
 
 Exactly five tabs remain authoritative:
 
@@ -50,12 +79,12 @@ No vector database, retry table, Shopping table, archive table, or compaction ta
 
 ## Validated architecture claims
 
-The following are evidence-backed rather than merely designed:
+Evidence-backed claims include:
 
 - Runtime and Storage are separate.
 - DomainModules do not write providers directly.
 - PersistenceCoordinator is the semantic write gate.
-- persisted ActiveTask uses the canonical top-level shape; module-specific facts live under `state`, with canonical `completed` / `next` task-step lists.
+- persisted ActiveTask uses the canonical top-level shape; module-specific facts live under `state`.
 - ContextRetriever is read-only and bounded.
 - newest direct observation outranks stored/history-derived state.
 - unknown is not zero/false/absent.
@@ -67,51 +96,34 @@ The following are evidence-backed rather than merely designed:
 - Events remain append-only cold history while reusable knowledge compacts into bounded Experience records.
 - history growth does not cause proportional normal ContextPack growth.
 
-See `docs/Kitchen_System_v0.8_Validated_Baseline.md`, `docs/RELEASE_v0.8.1.md`, and `tests/VALIDATION_REGISTRY.yaml`.
+## Distribution discipline
 
-## Deployment entrypoints
+GitHub has two distinct roles:
 
-Machine-readable deployment metadata lives in `dist/deployments.yaml`.
+1. **public read transport** — any runtime with ordinary web/HTTP access may read the public bootstrap and bundle files;
+2. **development connector** — optional repository mutation, Issue evidence, CI, and release maintenance.
 
-Validated entrypoints:
+The second role is never an end-user dependency.
 
-- Pure Web fallback: `SKILL.md` / `dist/KITCHEN_SKILL_WEB_LIVE_COOKING.md`
-- Web + Google Drive validated deployment: `dist/KITCHEN_SKILL_WEB_GOOGLE_DRIVE_SHOPPING_COOKING_V08.md`
+Formal test prompts must therefore treat GitHub Issue writeback as optional. If GitHub write access is unavailable, the full test/probe report must be returned in the conversation for later inspection.
 
-The root `SKILL.md` intentionally remains the validated Pure Web fallback rather than silently becoming a durable-provider bundle.
+## Current experiment — Notion capability/conformance
 
-## Release discipline
+The former Google Drive Web↔Codex portability experiment was superseded before execution.
 
-v0.8.1 adds release discipline around the validated product:
+Current tracking issue: #9 — `Notion capability gate: Web vs Codex plugin conformance`.
 
-- `tests/VALIDATION_REGISTRY.yaml` — machine-readable validation evidence and blob guards.
-- `dist/deployments.yaml` — explicit deployment identities.
-- `scripts/validate_repo.py` — deterministic repository invariant checks.
-- `.github/workflows/static-validation.yml` — static validation on push/PR.
-- `tests/release/*` — current-HEAD composite release gate, including canonical ActiveTask shape validation.
-- `demo/RELEASE_SESSION_A_PROMPT.md` / `demo/RELEASE_SESSION_B_PROMPT.md` — real two-session release regression harness.
+Before implementing a Notion StorageProvider, we separately test the actual Notion plugin/app exposed in Web and the actual Notion plugin/app exposed in Codex. We compare proven operations rather than assuming that two Notion-branded integrations expose the same API.
 
-A historical result is inherited only when its declared Git blob guards still match. A product-bearing change to a guarded file invalidates that inherited evidence until the relevant gate is rerun.
+Probe assets:
 
-## v0.8.1 release proof
+- `tests/notion/capability_matrix.yaml`
+- `demo/NOTION_WEB_CAPABILITY_PROMPT.md`
+- `demo/NOTION_CODEX_CAPABILITY_PROMPT.md`
 
-Issue #7 composite path validated:
+The probes use public raw GitHub URLs for specification loading and do not require a GitHub connector. Notion provider mapping will be designed only after both capability reports exist.
 
-`Shopping purchase`
-→ `canonical exact 500 g inventory`
-→ fresh `Cooking` retrieval from STATE
-→ canonical Cooking ActiveTask persistence
-→ approximate consumption (`500 exact - ~120 = ~380 approximate`)
-→ newest Cooking observation
-→ real failed provider write against a deleted sacrificial Sheet
-→ no false durable success + pending semantic state retained
-→ no valid-store revision advance / partial mutation
-→ bounded retry against restored valid store
-→ revision `5 → 6` exactly once and newest canonical task state persists.
-
-The successful composite run used tested commit `d3c1fac7ea4de7e3d83dd198ce9799d82ed7c81b`, frozen PASS result comment `5441221465`, cleanup comment `5441226472`, and static-validation run `33083694868`.
-
-## Not implemented yet
+## Not implemented / not yet validated
 
 Do not confuse canonical-schema coverage with implemented product modules.
 
@@ -124,20 +136,11 @@ Not yet implemented/validated as independent DomainModules:
 
 Not yet validated:
 
-- Codex/local runtime composition
-- Web ↔ Codex shared-store portability
-- second shared remote provider
+- Notion StorageProvider mapping
+- Web/App ↔ Codex shared-Notion synchronization
+- second shared remote provider in production
 - concurrent multi-client write conflict resolution
 
 Sequential clients remain the v1 assumption.
 
-## Next after v0.8.1
-
-Preferred next architecture/product experiment:
-
-1. Web ↔ Codex sequential portability through the same shared Google Drive store;
-2. then an Inventory DomainModule using the existing `STATE.inventory` contract;
-3. then Planning using `STATE.plans`;
-4. defer Recipe durable-schema expansion and second-provider work until the release baseline remains stable.
-
-Do not add a vector database without a demonstrated retrieval failure.
+Do not add a vector database without demonstrated retrieval failure evidence.

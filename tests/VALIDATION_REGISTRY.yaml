@@ -1,4 +1,4 @@
-version: 1
+version: 2
 repository: john-no-bug/kitchen-skill
 
 architecture:
@@ -7,6 +7,20 @@ architecture:
   validated_addendum: docs/Kitchen_System_v0.8_Validated_Baseline.md
   release_record: docs/RELEASE_v0.8.1.md
 
+distribution:
+  public_bootstrap:
+    status: active
+    entrypoint: SKILL.md
+    manifest: dist/deployments.yaml
+    connector_required: false
+    preferred_transport: public_web_http
+    fallback_transport:
+      - installed_skill_or_app
+      - user_supplied_copy
+    rule: >-
+      Root SKILL.md is a distribution bootstrap. Product validation attaches to
+      the selected dist artifact, not to bootstrap/product blob equality.
+
 validated_gates:
   pure_web_live_cooking:
     status: validated
@@ -14,8 +28,8 @@ validated_gates:
     tested_commit: f45192435fd8e55cbc72759e65c52e2e25d3b3f5
     evidence: "3 x 36/36 PASS"
     inheritance: blob_identity
+    historical_root_skill_blob: 37a8d15bb376579a9a33ede514b121dff04c249d
     blob_guards:
-      SKILL.md: 37a8d15bb376579a9a33ede514b121dff04c249d
       dist/KITCHEN_SKILL_WEB_LIVE_COOKING.md: 37a8d15bb376579a9a33ede514b121dff04c249d
 
   web_google_drive_fresh_session:
@@ -56,7 +70,7 @@ validated_gates:
     result_comment: 5441221465
     cleanup_comment: 5441226472
     static_validation_run: 33083694868
-    inheritance: metadata_only_release_freeze
+    inheritance: metadata_or_distribution_only_change
 
 release_candidate:
   name: v0.8.1
@@ -68,7 +82,7 @@ release_candidate:
   cleanup_comment: 5441226472
   static_validation_run: 33083694868
   release_record: docs/RELEASE_v0.8.1.md
-  release_ref: main
+  release_freeze_commit: d0f3edf032696a7459ff20bdb996fe1d46c7ad59
   required_static_validation: true
   required_composite_suite: tests/release/manifest.yaml
   validated_conditions:
@@ -79,9 +93,20 @@ release_candidate:
     - registry_status_validated_release
     - release_docs_synchronized
 
+active_probes:
+  notion_plugin_conformance:
+    status: pending_web_and_codex_results
+    issue: 9
+    matrix: tests/notion/capability_matrix.yaml
+    web_prompt: demo/NOTION_WEB_CAPABILITY_PROMPT.md
+    codex_prompt: demo/NOTION_CODEX_CAPABILITY_PROMPT.md
+    connector_required: false
+
 rules:
   - A gate result may be inherited only when its declared inheritance guard still matches.
-  - A documentation/test/CI-only commit may inherit guarded product evidence when product blobs are unchanged.
+  - A documentation/test/CI/distribution-only commit may inherit guarded product evidence when product blobs are unchanged.
+  - Root SKILL.md is intentionally allowed to change as a public bootstrap without changing the validated Pure Web product blob.
   - A product-bearing change to a guarded file invalidates inherited evidence for that gate until rerun.
   - Issue closure alone is not a replacement for exact tested commit and evidence identity.
-  - validated_release means the composite tested commit passed and subsequent release-freeze changes are metadata/docs/CI-only with static validation passing.
+  - GitHub connector access is never an end-user Kitchen Skill runtime requirement.
+  - validated_release means the composite tested commit passed and subsequent non-product changes preserve guarded product identities with static validation passing.

@@ -1,15 +1,29 @@
 # Kitchen Skill — Codex Notion Capability Probe
 
-Run this in the **Codex surface** where the Notion plugin/app version you actually intend to use is installed. In Sources / Use plugins (or the equivalent control), explicitly select that intended Notion integration.
+Run this in the **Codex surface** where the Notion plugin/app version you actually intend to use is installed. In Sources / Use plugins (or equivalent), explicitly select that intended Notion integration.
 
 This is a Notion-plugin capability test, not a local-storage or coding test.
 
+## Public specification loading
+
+A GitHub connector is **not required**.
+
+Read the probe matrix through ordinary public web/browser/HTTP access from:
+
+`https://raw.githubusercontent.com/john-no-bug/kitchen-skill/main/tests/notion/capability_matrix.yaml`
+
+Rendered fallback:
+
+`https://github.com/john-no-bug/kitchen-skill/blob/main/tests/notion/capability_matrix.yaml`
+
+If Codex Browser/web access is unavailable or disabled by workspace policy, ask the user to paste/upload the matrix. Do not ask them to connect GitHub.
+
 ## Ground rules
 
-1. Read `tests/notion/capability_matrix.yaml` from `john-no-bug/kitchen-skill` at current `main`.
-2. Test only the selected Codex Notion plugin/app and its actual exposed actions.
-3. Codex filesystem, worktree, shell, Python, SQLite, local JSON/YAML/Markdown, repository files, direct Notion REST calls/curl, browser automation, or another MCP/app are **not substitutes** for a missing Notion plugin action.
-4. You may use local/code capabilities only to inspect the Kitchen test specification or format the final report; they must not serve as persistence evidence.
+1. Test only the selected Codex Notion plugin/app and its actual exposed actions.
+2. Codex filesystem, worktree, shell, Python, SQLite, local JSON/YAML/Markdown, repository checkout state, direct Notion REST calls/curl, browser automation, or another MCP/app are **not substitutes** for a missing Notion plugin action.
+3. Local/code capabilities may format the final report only; they must not serve as persistence evidence.
+4. Public GitHub reading is allowed only for loading the probe specification; GitHub is not persistence evidence.
 5. Do not infer support from the public Notion API or plugin label.
 6. Do not expose OAuth tokens, workspace secrets, account IDs, or credentials.
 7. Use scratch Notion content only.
@@ -46,7 +60,7 @@ Optional: `lookup_keys`, `status`.
 
 Record returned database/data-source/page/container IDs and inspect property schema if possible.
 
-If the selected Codex plugin cannot create/configure a structured collection, report that accurately. Continue P0 only if an explicitly disposable, writable structured probe target is already available; otherwise stop after the bootstrap finding.
+If collection creation/schema configuration is unavailable, continue P0 only if an explicitly disposable writable structured probe target already exists. If P0 later passes, classify `template_bootstrap_required`. If no safe target exists, stop after reporting the bootstrap gap.
 
 ## Step C2 — create/read META-style row
 
@@ -64,7 +78,7 @@ Use the Notion plugin's structured property query/filter to request:
 
 with finite result limit/page size, preferably `1`.
 
-Record exact filter capability, limit/page-size capability, pagination/sort controls, and returned stable record ID.
+Record exact filter capability, limit/page-size, pagination/sort controls, and returned stable record ID.
 
 Full-text/file search is not equivalent to `structured_query`.
 
@@ -92,7 +106,7 @@ Attempt only if exposed by this exact plugin:
 - conditional/version-aware update;
 - transactional multi-record write.
 
-Record unsupported operations without trying to recreate them through shell/API code.
+Record unsupported operations without recreating them through shell/API code.
 
 ## Step C8 — cleanup
 
@@ -102,7 +116,7 @@ If cleanup is unavailable, report `cleanup_gap` and preserve exact scratch title
 
 ## Required report
 
-Return:
+Always return one complete report in the conversation:
 
 ```yaml
 surface: codex
@@ -143,4 +157,4 @@ overall_classification: p0_pass|template_bootstrap_required|unusable_as_kitchen_
 
 Every `supported` result must be backed by a real action through the selected Codex Notion plugin in this run.
 
-If GitHub Issue #9 commenting is available, append this report there under heading `Codex Notion capability result`; otherwise return it verbatim to the user.
+If GitHub Issue #9 commenting happens to be available in this development/test environment, it may additionally append the report there under `Codex Notion capability result`. That writeback is optional and must never be required from normal users.
